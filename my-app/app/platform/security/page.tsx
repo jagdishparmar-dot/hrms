@@ -5,6 +5,13 @@ import { listRecentPlatformAuditsAction } from '@/lib/appwrite/platform-actions'
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { DEFAULT_SUPER_ADMIN_EMAIL } from '@/lib/appwrite/super-admin';
 import { PlatformAuditTable } from '@/components/platform/company-detail-forms';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Security',
+  description: 'Platform security settings and audit log review.',
+  path: '/platform/security',
+});
 
 export default async function PlatformSecurityPage() {
   await requirePlatformAdmin();

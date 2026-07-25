@@ -5,6 +5,13 @@ import { PageHeader } from "@/components/page-header";
 import { ShiftsDirectory } from "@/components/shifts-directory";
 import { Button } from "@/components/ui/button";
 import { listShiftsAction } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Shifts",
+  description: "Configure work shifts, timings, and overnight attendance windows.",
+  path: "/shifts",
+});
 
 export default async function ShiftsPage() {
   const shifts = await listShiftsAction();

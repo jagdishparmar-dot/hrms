@@ -2,6 +2,13 @@ import { AttendanceMonthlyGrid } from "@/components/attendance-monthly-grid";
 import { AdminShell } from "@/components/admin-shell";
 import { currentRegisterMonth } from "@/lib/attendance-register";
 import { getAttendanceRegisterAction } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Monthly attendance",
+  description: "Monthly attendance register with present, absent, and leave day summaries.",
+  path: "/attendance/monthly",
+});
 
 export default async function AttendanceMonthlyPage({
   searchParams,

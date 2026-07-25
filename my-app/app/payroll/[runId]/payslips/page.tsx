@@ -14,6 +14,20 @@ import {
   listEmployeesAction,
   listPayslipsForRunAction,
 } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ runId: string }>;
+}): Promise<import("next").Metadata> {
+  const { runId } = await params;
+  return pageMetadata({
+    title: "Payslips",
+    description: "Review generated payslips for this payroll run.",
+    path: `/payroll/${runId}/payslips`,
+  });
+}
 
 export default async function PayslipsPage({
   params,

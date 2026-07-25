@@ -3,6 +3,13 @@ import { PageHeader } from "@/components/page-header";
 import { SettingsForm } from "@/components/settings-form";
 import { requireCompanyAdmin } from "@/lib/appwrite/auth";
 import { listThreePlVendorsAction } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Settings",
+  description: "Company organization settings, departments, employee codes, and 3PL vendors.",
+  path: "/settings",
+});
 
 export default async function SettingsPage() {
   const ctx = await requireCompanyAdmin();

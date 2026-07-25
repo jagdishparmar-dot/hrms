@@ -3,6 +3,13 @@ import { PageHeader } from '@/components/page-header';
 import { PlatformProvisionForm } from '@/components/platform/provision-form';
 import { PlatformSection } from '@/components/platform/platform-section';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'New company',
+  description: 'Provision a new tenant company on the CheckIn HR platform.',
+  path: '/platform/companies/new',
+});
 
 export default async function PlatformNewCompanyPage() {
   await requirePlatformAdmin();

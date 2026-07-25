@@ -6,6 +6,13 @@ import { PlatformCompaniesTable } from '@/components/platform/companies-table';
 import { PlatformSection } from '@/components/platform/platform-section';
 import { listPlatformCompaniesAction } from '@/lib/appwrite/platform-actions';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Companies',
+  description: 'Manage tenant companies, plans, and lifecycle status.',
+  path: '/platform/companies',
+});
 
 export default async function PlatformCompaniesPage({
   searchParams,

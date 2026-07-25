@@ -4,6 +4,13 @@ import { PlatformSection } from '@/components/platform/platform-section';
 import { Badge } from '@/components/ui/badge';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { appwriteConfig } from '@/lib/appwrite/config';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Integrations',
+  description: 'Appwrite project integration endpoints and mobile API configuration.',
+  path: '/platform/integrations',
+});
 
 export default async function PlatformIntegrationsPage() {
   await requirePlatformAdmin();

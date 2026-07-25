@@ -2,6 +2,13 @@ import { AdminShell } from '@/components/admin-shell';
 import { PageHeader } from '@/components/page-header';
 import { PlatformSection } from '@/components/platform/platform-section';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Notifications',
+  description: 'Platform notification channels and delivery settings.',
+  path: '/platform/notifications',
+});
 
 export default async function PlatformNotificationsPage() {
   await requirePlatformAdmin();

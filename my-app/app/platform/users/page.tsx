@@ -13,6 +13,13 @@ import {
 import { listPlatformAdminsAction } from '@/lib/appwrite/platform-actions';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { DEFAULT_SUPER_ADMIN_EMAIL } from '@/lib/appwrite/super-admin';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Platform users',
+  description: 'View platform administrators and super admin access.',
+  path: '/platform/users',
+});
 
 export default async function PlatformUsersPage() {
   await requirePlatformAdmin();

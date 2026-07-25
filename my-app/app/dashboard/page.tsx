@@ -23,6 +23,13 @@ import {
 import { getTenantDashboardAction } from "@/lib/appwrite/actions";
 import { getDashboardStatsAction } from "@/lib/appwrite/phase1-actions";
 import { formatAttendanceTime } from "@/lib/attendance-export";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Dashboard",
+  description: "Overview of workforce activity, attendance alerts, and HR operations.",
+  path: "/dashboard",
+});
 
 export default async function DashboardPage() {
   const [stats, tenant] = await Promise.all([

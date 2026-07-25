@@ -4,6 +4,13 @@ import { PlatformSection } from '@/components/platform/platform-section';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { DEFAULT_SUPER_ADMIN_EMAIL } from '@/lib/appwrite/super-admin';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'System',
+  description: 'Platform system configuration, database IDs, and environment health.',
+  path: '/platform/system',
+});
 
 export default async function PlatformSystemPage() {
   await requirePlatformAdmin();

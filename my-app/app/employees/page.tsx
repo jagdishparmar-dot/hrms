@@ -16,6 +16,13 @@ import {
   employeeCodeConfigFromSettings,
   previewNextEmployeeCode,
 } from "@/lib/employee-code";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Employees",
+  description: "Browse, search, and manage your workforce directory, roles, and employment details.",
+  path: "/employees",
+});
 
 export default async function EmployeesPage({
   searchParams,

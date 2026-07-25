@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
 import { SignupForm } from "@/components/signup-form";
 import { getCurrentUser } from "@/lib/appwrite/auth";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Create company",
+  description: "Register your organization on CheckIn HR and start managing your workforce.",
+  path: "/signup",
+});
 
 export default async function SignupPage() {
   const user = await getCurrentUser();

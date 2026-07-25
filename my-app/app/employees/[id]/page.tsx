@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import {
   Briefcase,
   Building2,
@@ -50,6 +51,29 @@ import {
 } from "@/lib/appwrite/phase1-actions";
 import { formatAttendanceTime } from "@/lib/attendance-export";
 import { getInitials } from "@/lib/utils";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const employee = await getEmployeeAction(id);
+    return pageMetadata({
+      title: employee.name,
+      description: `Employee profile for ${employee.name}${employee.designation ? ` — ${employee.designation}` : ""}.`,
+      path: `/employees/${id}`,
+    });
+  } catch {
+    return pageMetadata({
+      title: "Employee profile",
+      description: "View and manage employee profile, salary, documents, and attendance.",
+      path: `/employees/${id}`,
+    });
+  }
+}
 
 function statusBadgeClass(status: string) {
   if (status === "active") {

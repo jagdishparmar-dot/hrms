@@ -15,6 +15,13 @@ import {
 } from '@/components/ui/table';
 import { getPlatformOverviewAction } from '@/lib/appwrite/platform-actions';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Billing',
+  description: 'Platform billing overview and tenant plan distribution.',
+  path: '/platform/billing',
+});
 
 export default async function PlatformBillingPage() {
   await requirePlatformAdmin();

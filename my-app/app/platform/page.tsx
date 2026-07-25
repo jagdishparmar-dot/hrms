@@ -14,6 +14,13 @@ import {
 } from '@/lib/appwrite/platform-actions';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { DEFAULT_SUPER_ADMIN_EMAIL } from '@/lib/appwrite/super-admin';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Overview',
+  description: 'Platform overview with tenant counts, health metrics, and recent audit activity.',
+  path: '/platform',
+});
 
 export default async function PlatformOverviewPage() {
   const admin = await requirePlatformAdmin();

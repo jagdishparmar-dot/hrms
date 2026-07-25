@@ -20,6 +20,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { listPayrollRunsAction } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Payroll",
+  description: "Run monthly payroll, review totals, and manage payslip generation.",
+  path: "/payroll",
+});
 
 export default async function PayrollPage() {
   const runs = await listPayrollRunsAction();

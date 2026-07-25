@@ -9,6 +9,13 @@ import {
   listShiftAssignmentsAction,
   listShiftsAction,
 } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Shift roster",
+  description: "Assign employees to shifts and manage roster schedules.",
+  path: "/shifts/roster",
+});
 
 export default async function ShiftRosterPage({
   searchParams,

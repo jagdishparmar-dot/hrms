@@ -32,6 +32,13 @@ import {
   listMyLeaveBalancesAction,
 } from "@/lib/appwrite/phase1-actions";
 import { isCompanyAdminRole } from "@/lib/appwrite/types";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Leave",
+  description: "Apply for leave, review requests, and manage leave balances and types.",
+  path: "/leave",
+});
 
 export default async function LeavePage() {
   const ctx = await requireTenantMember();

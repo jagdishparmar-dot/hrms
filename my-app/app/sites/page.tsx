@@ -2,6 +2,13 @@ import { AdminShell } from "@/components/admin-shell";
 import { PageHeader } from "@/components/page-header";
 import { SitesDirectory } from "@/components/sites-directory";
 import { listSitesAction } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Sites",
+  description: "Manage geofenced office sites used for mobile attendance check-in.",
+  path: "/sites",
+});
 
 export default async function SitesPage() {
   const sites = await listSitesAction();

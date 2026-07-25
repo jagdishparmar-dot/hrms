@@ -2,6 +2,13 @@ import { AdminShell } from '@/components/admin-shell';
 import { PageHeader } from '@/components/page-header';
 import { PlatformSection } from '@/components/platform/platform-section';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+
+export const metadata = pageMetadata({
+  title: 'Branding',
+  description: 'Default platform branding and white-label settings.',
+  path: '/platform/branding',
+});
 
 export default async function PlatformBrandingPage() {
   await requirePlatformAdmin();

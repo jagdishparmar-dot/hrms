@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { selectCompanyAction } from "@/lib/appwrite/actions";
 import { getCurrentUser, isPlatformAdminEmail } from "@/lib/appwrite/auth";
 import { getCompanyById, listMembershipsForUser } from "@/lib/appwrite/tenant";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Select company",
+  description: "Choose which company workspace to open in CheckIn HR.",
+  path: "/select-company",
+});
 
 export default async function SelectCompanyPage() {
   const user = await getCurrentUser();

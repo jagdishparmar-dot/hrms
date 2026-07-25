@@ -13,6 +13,13 @@ import {
   listRegularizationsAction,
   listSitesAction,
 } from "@/lib/appwrite/phase1-actions";
+import { pageMetadata } from "@/lib/site-metadata";
+
+export const metadata = pageMetadata({
+  title: "Attendance",
+  description: "Review punch records, regularizations, and daily attendance across your workforce.",
+  path: "/attendance",
+});
 
 export default async function AttendancePage({
   searchParams,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
+import { rootMetadata } from "@/lib/site-metadata";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -16,10 +17,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 });
 
-export const metadata: Metadata = {
-  title: "CheckIn HR Admin",
-  description: "HR admin portal for employees, profiles, and attendance",
-};
+export const metadata: Metadata = rootMetadata;
 
 export default function RootLayout({
   children,

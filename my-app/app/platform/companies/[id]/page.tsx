@@ -18,6 +18,21 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getPlatformCompanyDetailAction } from '@/lib/appwrite/platform-actions';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
+import { pageMetadata } from '@/lib/site-metadata';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  return pageMetadata({
+    title: 'Company details',
+    description: 'Manage tenant configuration, plan, users, and lifecycle.',
+    path: `/platform/companies/${id}`,
+  });
+}
 
 export default async function PlatformCompanyDetailPage({
   params,
