@@ -48,6 +48,16 @@ export const updateCompanySettingsSchema = z.object({
     .optional()
     .or(z.literal('')),
   emailSenderName: z.string().trim().max(128).optional().or(z.literal('')),
+  employeeCodePrefix: z
+    .string()
+    .trim()
+    .max(16)
+    .regex(/^[A-Za-z0-9-]*$/, 'Use letters, numbers, or hyphens only')
+    .optional()
+    .or(z.literal('')),
+  employeeCodePadding: z.coerce.number().int().min(1).max(8).optional(),
+  employeeCodeNextSequence: z.coerce.number().int().min(1).max(99_999_999).optional(),
+  employeeCodeAutoGenerate: z.coerce.boolean().optional(),
 });
 
 export const updateCompanyPlanSchema = z.object({

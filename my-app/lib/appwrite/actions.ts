@@ -148,28 +148,45 @@ export async function loginAction(formData: FormData) {
     const loginAccount = new Account(client);
     const passwordSession = await loginAccount.createEmailPasswordSession(email, password);
 
-    try {
-      await loginAccount.deleteSession(passwordSession.$id);
-    } catch {
-      /* ignore */
+    const platform = isPlatformAdminEmail(email);
+    const { users } = createAdminClient();
+
+    if (!platform) {
+      const appwriteUser = await users.get(passwordSession.userId);
+      if (!appwriteUser.emailVerification) {
+        try {
+          await loginAccount.deleteSession(passwordSession.$id);
+        } catch {
+          /* ignore */
+        }
+        return {
+          ok: false as const,
+          error: 'Please verify your email with the admin before proceeding with the login.',
+        };
+      }
     }
 
-    await setSessionCookie(passwordSession.userId);
-
-    const platform = isPlatformAdminEmail(email);
     const memberships = await listMembershipsForUser(passwordSession.userId);
 
     if (platform && (safeNext.startsWith('/platform') || memberships.length === 0)) {
+      try {
+        await loginAccount.deleteSession(passwordSession.$id);
+      } catch {}
+      await setSessionCookie(passwordSession.userId);
       redirect('/platform');
     }
 
     if (memberships.length === 0 && !platform) {
+      try {
+        await loginAccount.deleteSession(passwordSession.$id);
+      } catch {}
       return {
         ok: false as const,
-        error: 'No company membership found for this account.',
+        error: 'You are not assigned to any active company. Please contact support or your administrator.',
       };
     }
 
+    // Check if the assigned company is active
     let selected = companyId
       ? memberships.find((m) => m.companyId === companyId)
       : undefined;
@@ -177,6 +194,28 @@ export async function loginAction(formData: FormData) {
     if (!selected && memberships.length === 1) {
       selected = memberships[0];
     }
+
+    if (selected && !platform) {
+      const { getCompanyById } = await import('@/lib/appwrite/tenant');
+      const company = await getCompanyById(selected.companyId);
+      if (!company || company.status === 'suspended' || company.status === 'archived') {
+        try {
+          await loginAccount.deleteSession(passwordSession.$id);
+        } catch {}
+        return {
+          ok: false as const,
+          error: 'Your assigned company has been suspended or deactivated. Please contact support.',
+        };
+      }
+    }
+
+    try {
+      await loginAccount.deleteSession(passwordSession.$id);
+    } catch {
+      /* ignore */
+    }
+
+    await setSessionCookie(passwordSession.userId);
 
     if (selected) {
       await setCompanyCookie(selected.companyId);
@@ -374,6 +413,12 @@ export async function updateTenantSettingsAction(formData: FormData) {
     logoUrl: formData.get('logoUrl') || '',
     primaryColor: formData.get('primaryColor') || '',
     emailSenderName: formData.get('emailSenderName') || '',
+    employeeCodePrefix: formData.get('employeeCodePrefix') || '',
+    employeeCodePadding: formData.get('employeeCodePadding') || 4,
+    employeeCodeNextSequence: formData.get('employeeCodeNextSequence') || 1,
+    employeeCodeAutoGenerate:
+      formData.get('employeeCodeAutoGenerate') === 'on' ||
+      formData.get('employeeCodeAutoGenerate') === 'true',
   });
 
   if (!parsed.success) {
@@ -406,6 +451,12 @@ export async function updateTenantSettingsAction(formData: FormData) {
     jurisdictions: jurisdictions.length ? jurisdictions : ctx.company.settings.jurisdictions,
     departments,
     designations,
+    employeeCodePrefix: data.employeeCodePrefix?.trim() || 'EMP',
+    employeeCodePadding: data.employeeCodePadding ?? ctx.company.settings.employeeCodePadding ?? 4,
+    employeeCodeNextSequence:
+      data.employeeCodeNextSequence ?? ctx.company.settings.employeeCodeNextSequence ?? 1,
+    employeeCodeAutoGenerate:
+      data.employeeCodeAutoGenerate ?? ctx.company.settings.employeeCodeAutoGenerate ?? true,
   };
 
   const branding = {

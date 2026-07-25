@@ -43,11 +43,11 @@ export const createEmployeeSchema = z
     vendorId: z.string().trim().max(64).optional().or(z.literal('')),
     department: z.string().trim().max(128).optional().or(z.literal('')),
     designation: z.string().trim().max(128).optional().or(z.literal('')),
-    phone: z.string().trim().max(32).optional().or(z.literal('')),
-    primarySiteId: z.string().optional().or(z.literal('')),
-    workShiftStart: z.string().trim().default('09:00'),
-    workShiftEnd: z.string().trim().default('18:00'),
-    shiftId: z.string().trim().max(64).optional().or(z.literal('')),
+    phone: z.string().trim().min(5, "Phone is required").max(32),
+    primarySiteId: z.string().min(1, "Primary site is required"),
+    workShiftStart: z.string().trim().min(1, "Start time is required").default('09:00'),
+    workShiftEnd: z.string().trim().min(1, "End time is required").default('18:00'),
+    shiftId: z.string().trim().min(1, "Shift is required").max(64),
     role: z.enum(['employee', 'company_admin', 'reporting_manager', 'hr_manager']).default('employee'),
   })
   .superRefine((data, ctx) => {
@@ -220,7 +220,7 @@ export const leaveBalanceAssignSchema = z.object({
 export const salaryStructureSchema = z.object({
   employeeId: z.string().min(1),
   effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  basic: z.coerce.number().min(0),
+  basic: z.coerce.number().min(0).default(0),
   hra: z.coerce.number().min(0).default(0),
   specialAllowance: z.coerce.number().min(0).default(0),
   otherEarnings: z.coerce.number().min(0).default(0),

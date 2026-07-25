@@ -1,7 +1,7 @@
 "use client";
 
-import type { ComponentProps } from "react";
-import { useEffect, useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,25 +32,18 @@ export function FormField({
   type?: string;
   className?: string;
 } & Omit<
-  ComponentProps<typeof Input>,
+  React.ComponentProps<typeof Input>,
   "name" | "type" | "className" | "defaultValue" | "value" | "onChange"
 > & {
     defaultValue?: string | number | readonly string[];
     value?: string | number | readonly string[];
-    onChange?: ComponentProps<typeof Input>["onChange"];
+    onChange?: React.ComponentProps<typeof Input>["onChange"];
   }) {
   const isControlled = valueProp !== undefined;
-  const [value, setValue] = useState(() =>
-    String(isControlled ? valueProp : (defaultValue ?? "")),
+  const [uncontrolledValue, setUncontrolledValue] = useState(() =>
+    String(defaultValue ?? ""),
   );
-
-  useEffect(() => {
-    if (isControlled) {
-      setValue(String(valueProp));
-      return;
-    }
-    setValue(String(defaultValue ?? ""));
-  }, [defaultValue, isControlled, valueProp]);
+  const value = isControlled ? String(valueProp) : uncontrolledValue;
 
   return (
     <div className={cn("grid gap-2", className)}>
@@ -62,7 +55,7 @@ export function FormField({
         value={value}
         onChange={(event) => {
           if (!isControlled) {
-            setValue(event.target.value);
+            setUncontrolledValue(event.target.value);
           }
           onChange?.(event);
         }}
@@ -71,8 +64,6 @@ export function FormField({
     </div>
   );
 }
-
-const EMPTY_SELECT_VALUE = "__empty__";
 
 export function FormSelect({
   name,
@@ -94,27 +85,28 @@ export function FormSelect({
   onValueChange?: (value: string) => void;
 }) {
   const normalized = options.map((o) =>
-    typeof o === "string" ? { value: o, label: o } : o,
+    typeof o === 'string' ? { value: o, label: o } : o,
   );
 
   const initial =
     defaultValue ??
-    (placeholder ? "" : normalized[0]?.value ?? "");
+    (placeholder ? '' : normalized[0]?.value ?? '');
 
   const [value, setValue] = useState(initial);
 
   const handleChange = (next: string | null) => {
-    const resolved = next === EMPTY_SELECT_VALUE || next === null ? "" : next;
+    const resolved = next ?? '';
     setValue(resolved);
     onValueChange?.(resolved);
   };
 
-  const selectValue = value || (placeholder ? EMPTY_SELECT_VALUE : undefined);
+  // Empty optional selects use null so SelectValue shows the placeholder label.
+  const selectValue = value ? value : null;
 
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className={cn('grid gap-2', className)}>
       <Label htmlFor={name}>{label}</Label>
-      <input
+      <Input
         type="hidden"
         name={name}
         value={value}
@@ -122,12 +114,9 @@ export function FormSelect({
       />
       <Select value={selectValue} onValueChange={handleChange}>
         <SelectTrigger id={name} className="w-full">
-          <SelectValue placeholder={placeholder || "Select…"} />
+          <SelectValue placeholder={placeholder || 'Select…'} />
         </SelectTrigger>
         <SelectContent>
-          {placeholder ? (
-            <SelectItem value={EMPTY_SELECT_VALUE}>{placeholder}</SelectItem>
-          ) : null}
           {normalized.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
@@ -158,7 +147,7 @@ export function FormCheckbox({
         checked={checked}
         onCheckedChange={(value) => setChecked(value === true)}
       />
-      <input type="hidden" name={name} value={checked ? "on" : ""} />
+      <Input type="hidden" name={name} value={checked ? "on" : ""} />
       <span>{label}</span>
     </label>
   );
@@ -173,7 +162,7 @@ export function FormTextarea({
   name: string;
   label: string;
   className?: string;
-} & Omit<ComponentProps<typeof Textarea>, "name" | "className">) {
+} & Omit<React.ComponentProps<typeof Textarea>, "name" | "className">) {
   return (
     <div className={cn("grid gap-2", className)}>
       <Label htmlFor={name}>{label}</Label>

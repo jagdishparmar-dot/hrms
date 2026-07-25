@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import {
+  FormCheckbox,
   FormError,
   FormField,
   FormSuccess,
@@ -21,6 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { updateTenantSettingsAction } from '@/lib/appwrite/actions';
 import type { Company, ThreePlVendor } from '@/lib/appwrite/types';
+import { previewNextEmployeeCode } from '@/lib/employee-code';
 
 function SettingsHiddenFields({
   company,
@@ -47,6 +49,26 @@ function SettingsHiddenFields({
         <>
           <input type="hidden" name="departments" value={company.settings.departments.join(',')} />
           <input type="hidden" name="designations" value={company.settings.designations.join(',')} />
+          <input
+            type="hidden"
+            name="employeeCodePrefix"
+            value={company.settings.employeeCodePrefix ?? 'EMP'}
+          />
+          <input
+            type="hidden"
+            name="employeeCodePadding"
+            value={String(company.settings.employeeCodePadding ?? 4)}
+          />
+          <input
+            type="hidden"
+            name="employeeCodeNextSequence"
+            value={String(company.settings.employeeCodeNextSequence ?? 1)}
+          />
+          <input
+            type="hidden"
+            name="employeeCodeAutoGenerate"
+            value={company.settings.employeeCodeAutoGenerate !== false ? 'on' : ''}
+          />
         </>
       ) : null}
       {omit !== 'branding' ? (
@@ -113,6 +135,7 @@ export function SettingsForm({
 
   const activeVendorCount = vendors.filter((vendor) => vendor.status === 'active').length;
   const settingsVersion = `${company.$updatedAt ?? company.id}-${formRevision}`;
+  const nextEmployeeCodePreview = previewNextEmployeeCode(company.settings);
 
   return (
     <Tabs
@@ -207,6 +230,46 @@ export function SettingsForm({
                 defaultItems={company.settings.designations}
                 placeholder="Add designation"
               />
+              <div className="sm:col-span-2 space-y-4 rounded-xl border bg-muted/20 p-4">
+                <div>
+                  <p className="text-sm font-medium">Employee code generation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Used when adding employees. Next code preview:{' '}
+                    <span className="font-mono text-foreground">{nextEmployeeCodePreview}</span>
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    name="employeeCodePrefix"
+                    label="Code prefix"
+                    defaultValue={company.settings.employeeCodePrefix ?? 'EMP'}
+                    placeholder="EMP"
+                    maxLength={16}
+                  />
+                  <FormField
+                    name="employeeCodePadding"
+                    label="Sequence digits"
+                    type="number"
+                    min={1}
+                    max={8}
+                    defaultValue={String(company.settings.employeeCodePadding ?? 4)}
+                  />
+                  <FormField
+                    name="employeeCodeNextSequence"
+                    label="Next sequence number"
+                    type="number"
+                    min={1}
+                    defaultValue={String(company.settings.employeeCodeNextSequence ?? 1)}
+                  />
+                  <div className="flex items-end pb-1">
+                    <FormCheckbox
+                      name="employeeCodeAutoGenerate"
+                      label="Auto-generate code on employee create"
+                      defaultChecked={company.settings.employeeCodeAutoGenerate !== false}
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
             <SettingsSaveFooter
               pending={pending}

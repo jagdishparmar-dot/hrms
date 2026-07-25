@@ -18,16 +18,24 @@ import {
 } from '@/lib/appwrite/phase1-actions';
 import type {
   EmployeeMembership,
+  SalaryStructure,
   Site,
   ThreePlVendor,
   WorkShift,
 } from '@/lib/appwrite/types';
 import { maskAadhaar, maskBankAccount } from '@/lib/appwrite/types';
 import { formatShiftWindowLabel } from '@/lib/attendance-shift';
+import { salaryAmountsFromComponents, zeroSalaryAmounts } from '@/lib/salary-structure';
 
 type OrgConfig = {
   departments: string[];
   designations: string[];
+};
+
+export type EmployeeCodeFormConfig = {
+  autoGenerate: boolean;
+  suggestedCode: string;
+  prefix: string;
 };
 
 function buildOrgOptions(configured: string[], currentValue?: string) {
@@ -182,6 +190,7 @@ function ShiftSelectField({
       className="sm:col-span-2"
       placeholder="Custom hours (use start/end below)"
       defaultValue={defaultValue || ''}
+      required
       options={active.map((shift) => ({
         value: shift.id,
         label: `${shift.name} · ${formatShiftWindowLabel(shift)}`,
@@ -195,6 +204,7 @@ export function CreateEmployeeForm({
   shifts = [],
   orgConfig,
   vendors,
+  employeeCodeConfig,
   onSuccess,
   redirectOnSuccess = true,
 }: {
@@ -202,6 +212,7 @@ export function CreateEmployeeForm({
   shifts?: WorkShift[];
   orgConfig: OrgConfig;
   vendors: ThreePlVendor[];
+  employeeCodeConfig: EmployeeCodeFormConfig;
   onSuccess?: (employeeId: string) => void;
   redirectOnSuccess?: boolean;
 }) {
@@ -242,7 +253,17 @@ export function CreateEmployeeForm({
         required
         minLength={8}
       />
-      <FormField name="employeeCode" label="Employee code" />
+      <FormField name="employeeCode" label="Employee code" defaultValue={employeeCodeConfig.suggestedCode} placeholder={employeeCodeConfig.autoGenerate ? 'Auto-generated if empty' : 'Required'} required={!employeeCodeConfig.autoGenerate} />
+      {employeeCodeConfig.autoGenerate ? (
+        <p className="text-xs text-muted-foreground sm:col-span-2">
+          Auto-generates from prefix{' '}
+          <span className="font-mono text-foreground">{employeeCodeConfig.prefix}</span> configured in{' '}
+          <Link href="/settings" className="font-medium text-foreground underline underline-offset-4">
+            Company settings → Organization
+          </Link>
+          . Clear the field to assign the next sequence on save.
+        </p>
+      ) : null}
       <FormSelect
         name="employmentType"
         label="Employment type"
@@ -255,16 +276,17 @@ export function CreateEmployeeForm({
       {employmentType === '3PL' ? (
         <ThreePlVendorField vendors={vendors} required />
       ) : null}
-      <FormField name="phone" label="Phone" />
+      <FormField name="phone" label="Phone" required />
       <ShiftSelectField shifts={shifts} />
-      <FormField name="workShiftStart" label="Fallback start" defaultValue="09:00" />
-      <FormField name="workShiftEnd" label="Fallback end" defaultValue="18:00" />
+      <FormField name="workShiftStart" label="Fallback start" defaultValue="09:00" required />
+      <FormField name="workShiftEnd" label="Fallback end" defaultValue="18:00" required />
       <FormSelect
         name="primarySiteId"
         label="Primary site"
         className="sm:col-span-2"
         placeholder="Unassigned"
         options={sites.map((s) => ({ value: s.id, label: s.name }))}
+        required
       />
       <div className="sm:col-span-2">
         {!orgConfigured ? (
@@ -457,12 +479,22 @@ export function EditEmployeeForm({
   );
 }
 
-export function SalaryStructureForm({ employeeId }: { employeeId: string }) {
+export function SalaryStructureForm({
+  employeeId,
+  salary,
+}: {
+  employeeId: string;
+  salary?: SalaryStructure | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
+  const amounts = salary?.components
+    ? salaryAmountsFromComponents(salary.components)
+    : zeroSalaryAmounts();
+  const effectiveFrom = salary?.effectiveFrom || today;
 
   return (
     <form
@@ -488,19 +520,32 @@ export function SalaryStructureForm({ employeeId }: { employeeId: string }) {
         name="effectiveFrom"
         label="Effective from"
         type="date"
-        defaultValue={today}
+        defaultValue={effectiveFrom}
         required
       />
-      <FormField name="basic" label="Basic" type="number" defaultValue="20000" required />
-      <FormField name="hra" label="HRA" type="number" defaultValue="8000" />
+      <FormField name="basic" label="Basic" type="number" defaultValue={String(amounts.basic)} min={0} />
+      <FormField name="hra" label="HRA" type="number" defaultValue={String(amounts.hra)} min={0} />
       <FormField
         name="specialAllowance"
         label="Special allowance"
         type="number"
-        defaultValue="5000"
+        defaultValue={String(amounts.specialAllowance)}
+        min={0}
       />
-      <FormField name="otherEarnings" label="Other earnings" type="number" defaultValue="0" />
-      <FormField name="deductions" label="Deductions" type="number" defaultValue="0" />
+      <FormField
+        name="otherEarnings"
+        label="Other earnings"
+        type="number"
+        defaultValue={String(amounts.otherEarnings)}
+        min={0}
+      />
+      <FormField
+        name="deductions"
+        label="Deductions"
+        type="number"
+        defaultValue={String(amounts.deductions)}
+        min={0}
+      />
       <div className="sm:col-span-2 space-y-2">
         <FormError message={error} />
         <FormSuccess message={ok ? 'Salary structure saved.' : null} />

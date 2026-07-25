@@ -77,11 +77,32 @@ export async function getCurrentTenantContext(): Promise<{
 }
 
 export async function requireTenantMember(options?: { allowPasswordChange?: boolean }) {
-  const ctx = await getCurrentTenantContext();
-  if (!ctx) redirect('/login');
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+
+  const resolved = await resolveActiveCompany(user.$id);
+  
+  if (!resolved?.company || !resolved.membership || resolved.membership.status !== 'active') {
+    redirect('/logout?reason=no-company');
+  }
+
+  if (
+    resolved.company.status === 'suspended' ||
+    resolved.company.status === 'archived'
+  ) {
+    redirect('/logout?reason=banned');
+  }
+
+  const ctx = {
+    user,
+    company: resolved.company,
+    membership: resolved.membership,
+  };
+
   if (ctx.membership.mustChangePassword && !options?.allowPasswordChange) {
     redirect('/change-password');
   }
+
   return ctx;
 }
 

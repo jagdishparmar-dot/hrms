@@ -55,6 +55,11 @@ export interface CompanySettings {
   contactPhone?: string;
   dataRetentionDays?: number;
   modules?: CompanyModules;
+  /** Employee code auto-generation (tenant settings → Organization) */
+  employeeCodePrefix?: string;
+  employeeCodePadding?: number;
+  employeeCodeNextSequence?: number;
+  employeeCodeAutoGenerate?: boolean;
 }
 
 export interface CompanyFeatureFlags {
@@ -426,6 +431,10 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   contactPhone: '',
   dataRetentionDays: 365,
   modules: DEFAULT_MODULES,
+  employeeCodePrefix: 'EMP',
+  employeeCodePadding: 4,
+  employeeCodeNextSequence: 1,
+  employeeCodeAutoGenerate: true,
 };
 
 export const DEFAULT_FEATURE_FLAGS: CompanyFeatureFlags = {

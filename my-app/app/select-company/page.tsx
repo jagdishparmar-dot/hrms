@@ -13,7 +13,7 @@ export default async function SelectCompanyPage() {
   const memberships = await listMembershipsForUser(user.$id);
   if (memberships.length === 0) {
     if (isPlatformAdminEmail(user.email || "")) redirect("/platform");
-    redirect("/signup");
+    redirect("/logout?reason=no-company");
   }
   if (memberships.length === 1) redirect("/dashboard");
 

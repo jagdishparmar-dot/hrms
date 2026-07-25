@@ -26,6 +26,15 @@ import {
 import { appwriteConfig, SESSION_COOKIE } from '@/lib/appwrite/config';
 import { assertNotProtectedSuperAdmin } from '@/lib/appwrite/super-admin';
 import {
+  employeeCodeConfigFromSettings,
+  formatEmployeeCode,
+} from '@/lib/employee-code';
+import {
+  buildSalaryComponents,
+  computeCtcMonthly,
+  defaultSalaryComponents,
+} from '@/lib/salary-structure';
+import {
   employeeUpdatePayload,
   mapAttendance,
   mapEmployee,
@@ -69,6 +78,7 @@ import {
 import type {
   AttendanceRecord,
   AttendanceRegularization,
+  CompanySettings,
   EmployeeMembership,
   Holiday,
   LeaveBalance,
@@ -116,6 +126,50 @@ function toErrorMessage(error: unknown, fallback: string) {
     return String((error as { message: string }).message || fallback);
   }
   return fallback;
+}
+
+async function isEmployeeCodeInUse(companyId: string, code: string) {
+  if (!code) return false;
+  const { databases } = createAdminClient();
+  const result = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.employeesCollectionId,
+    [
+      Query.equal('companyId', companyId),
+      Query.equal('employeeCode', code),
+      Query.limit(1),
+    ],
+  );
+  return result.total > 0;
+}
+
+async function allocateEmployeeCode(companyId: string, settings: CompanySettings) {
+  const { databases } = createAdminClient();
+  const config = employeeCodeConfigFromSettings(settings);
+  let seq = config.nextSequence;
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const code = formatEmployeeCode(config, seq);
+    if (!(await isEmployeeCodeInUse(companyId, code))) {
+      const nextSettings: CompanySettings = {
+        ...settings,
+        employeeCodePrefix: config.prefix,
+        employeeCodePadding: config.padding,
+        employeeCodeNextSequence: seq + 1,
+        employeeCodeAutoGenerate: config.autoGenerate,
+      };
+      await databases.updateDocument(
+        appwriteConfig.databaseId,
+        appwriteConfig.companiesCollectionId,
+        companyId,
+        { settings: JSON.stringify(nextSettings) },
+      );
+      return { code, settings: nextSettings };
+    }
+    seq += 1;
+  }
+
+  throw new Error('Unable to allocate a unique employee code.');
 }
 
 async function getActiveThreePlVendor(
@@ -301,6 +355,28 @@ export async function createEmployeeAction(formData: FormData) {
     return { ok: false as const, error: 'Select a valid active shift, or leave shift blank.' };
   }
 
+  let employeeCode = (data.employeeCode || '').trim();
+  const codeConfig = employeeCodeConfigFromSettings(ctx.company.settings);
+
+  if (!employeeCode && codeConfig.autoGenerate) {
+    try {
+      const allocated = await allocateEmployeeCode(ctx.company.id, ctx.company.settings);
+      employeeCode = allocated.code;
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: toErrorMessage(error, 'Unable to generate employee code.'),
+      };
+    }
+  } else if (!employeeCode) {
+    return {
+      ok: false as const,
+      error: 'Employee code is required, or enable auto-generation in Company settings.',
+    };
+  } else if (await isEmployeeCodeInUse(ctx.company.id, employeeCode)) {
+    return { ok: false as const, error: 'Employee code is already in use.' };
+  }
+
   try {
     const { databases, users, teams } = createAdminClient();
     const count = await databases.listDocuments(
@@ -338,7 +414,7 @@ export async function createEmployeeAction(formData: FormData) {
         name: data.name,
         role: data.role,
         status: 'active',
-        employeeCode: data.employeeCode || '',
+        employeeCode,
         employmentType: data.employmentType,
         vendorId,
         department: data.department || '',
@@ -382,6 +458,25 @@ export async function createEmployeeAction(formData: FormData) {
       entityId: doc.$id,
       meta: { email: data.email },
     });
+
+    const salaryEffectiveFrom = dateIsoInTimeZone(
+      Date.now(),
+      ctx.company.settings.timezone || 'Asia/Kolkata',
+    );
+    await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.salaryStructuresCollectionId,
+      ID.unique(),
+      {
+        companyId: ctx.company.id,
+        employeeId: doc.$id,
+        effectiveFrom: salaryEffectiveFrom,
+        components: JSON.stringify(defaultSalaryComponents()),
+        ctcMonthly: 0,
+        status: 'active',
+      },
+      employeeDocumentPermissions(ctx.company.teamId),
+    );
 
     return { ok: true as const, employeeId: doc.$id };
   } catch (error) {
@@ -2100,40 +2195,25 @@ export async function upsertSalaryStructureAction(formData: FormData) {
   const parsed = salaryStructureSchema.safeParse({
     employeeId: formData.get('employeeId'),
     effectiveFrom: formData.get('effectiveFrom'),
-    basic: formData.get('basic'),
-    hra: formData.get('hra') || 0,
-    specialAllowance: formData.get('specialAllowance') || 0,
-    otherEarnings: formData.get('otherEarnings') || 0,
-    deductions: formData.get('deductions') || 0,
+    basic: formData.get('basic') ?? 0,
+    hra: formData.get('hra') ?? 0,
+    specialAllowance: formData.get('specialAllowance') ?? 0,
+    otherEarnings: formData.get('otherEarnings') ?? 0,
+    deductions: formData.get('deductions') ?? 0,
   });
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message || 'Invalid input.' };
   }
   const data = parsed.data;
-  const components = [
-    { key: 'basic', label: 'Basic', amount: data.basic, type: 'earning' as const },
-    { key: 'hra', label: 'HRA', amount: data.hra, type: 'earning' as const },
-    {
-      key: 'specialAllowance',
-      label: 'Special Allowance',
-      amount: data.specialAllowance,
-      type: 'earning' as const,
-    },
-    {
-      key: 'otherEarnings',
-      label: 'Other Earnings',
-      amount: data.otherEarnings,
-      type: 'earning' as const,
-    },
-    {
-      key: 'deductions',
-      label: 'Deductions',
-      amount: data.deductions,
-      type: 'deduction' as const,
-    },
-  ];
-  const ctcMonthly =
-    data.basic + data.hra + data.specialAllowance + data.otherEarnings - data.deductions;
+  const amounts = {
+    basic: data.basic,
+    hra: data.hra,
+    specialAllowance: data.specialAllowance,
+    otherEarnings: data.otherEarnings,
+    deductions: data.deductions,
+  };
+  const components = buildSalaryComponents(amounts);
+  const ctcMonthly = computeCtcMonthly(amounts);
 
   try {
     await getEmployeeAction(data.employeeId);
