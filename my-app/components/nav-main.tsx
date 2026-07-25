@@ -26,6 +26,8 @@ export type NavMainItem = {
   url: string;
   icon?: React.ReactNode;
   isActive?: boolean;
+  /** When true, only exact pathname match is active (no prefix). */
+  exact?: boolean;
   items?: {
     title: string;
     url: string;
@@ -49,7 +51,9 @@ export function NavMain({
           const hasChildren = Boolean(item.items?.length);
           const active =
             item.isActive ??
-            (pathname === item.url || pathname.startsWith(`${item.url}/`));
+            (item.exact
+              ? pathname === item.url
+              : pathname === item.url || pathname.startsWith(`${item.url}/`));
 
           if (!hasChildren) {
             return (

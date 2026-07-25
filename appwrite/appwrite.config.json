@@ -97,7 +97,8 @@
           "elements": [
             "active",
             "suspended",
-            "pending"
+            "pending",
+            "archived"
           ],
           "format": "enum",
           "default": null,

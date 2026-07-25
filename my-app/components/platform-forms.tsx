@@ -8,7 +8,6 @@ import {
   FormError,
   FormField,
   FormSelect,
-  FormSuccess,
 } from '@/components/form-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,60 +19,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import {
-  platformProvisionCompanyAction,
-  updateCompanyPlanAction,
-} from '@/lib/appwrite/actions';
+/** @deprecated Prefer `@/components/platform/provision-form` */
+export { PlatformProvisionForm } from '@/components/platform/provision-form';
+import { updateCompanyPlanAction } from '@/lib/appwrite/actions';
 import type { Company } from '@/lib/appwrite/types';
-
-export function PlatformProvisionForm() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
-  const [pending, startTransition] = useTransition();
-
-  return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        setError(null);
-        setOk(false);
-        startTransition(async () => {
-          const result = await platformProvisionCompanyAction(fd);
-          if (!result.ok) {
-            setError(result.error);
-            return;
-          }
-          setOk(true);
-          (e.target as HTMLFormElement).reset();
-          router.refresh();
-        });
-      }}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField name="companyName" label="Company name" required />
-        <FormField name="slug" label="Slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
-        <FormField name="adminName" label="Admin name" required />
-        <FormField name="adminEmail" label="Admin email" type="email" required />
-        <FormField
-          name="adminPassword"
-          label="Temp password"
-          type="password"
-          required
-          minLength={8}
-        />
-        <FormField name="plan" label="Plan" defaultValue="free" />
-        <FormField name="maxEmployees" label="Max employees" type="number" defaultValue="50" />
-      </div>
-      <FormError message={error} />
-      <FormSuccess message={ok ? 'Company provisioned.' : null} />
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Provisioning…' : 'Provision company'}
-      </Button>
-    </form>
-  );
-}
 
 export function PlatformCompanyCard({ company }: { company: Company }) {
   const router = useRouter();
@@ -123,6 +72,7 @@ export function PlatformCompanyCard({ company }: { company: Company }) {
               { value: 'active', label: 'active' },
               { value: 'suspended', label: 'suspended' },
               { value: 'pending', label: 'pending' },
+              { value: 'archived', label: 'archived' },
             ]}
           />
           <div className="space-y-2 pt-6 sm:col-span-2">

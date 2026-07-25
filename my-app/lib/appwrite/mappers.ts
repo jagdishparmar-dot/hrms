@@ -36,6 +36,7 @@ import type {
 import {
   DEFAULT_BRANDING,
   DEFAULT_FEATURE_FLAGS,
+  DEFAULT_MODULES,
   DEFAULT_SETTINGS,
 } from '@/lib/appwrite/types';
 
@@ -70,7 +71,13 @@ export function mapCompany(doc: Record<string, unknown>): Company {
     plan: String(doc.plan || 'free'),
     featureFlags: parseJson<CompanyFeatureFlags>(doc.featureFlags, DEFAULT_FEATURE_FLAGS),
     branding: parseJson<CompanyBranding>(doc.branding, DEFAULT_BRANDING),
-    settings: parseJson<CompanySettings>(doc.settings, DEFAULT_SETTINGS),
+    settings: (() => {
+      const settings = parseJson<CompanySettings>(doc.settings, DEFAULT_SETTINGS);
+      return {
+        ...settings,
+        modules: { ...DEFAULT_MODULES, ...(settings.modules || {}) },
+      };
+    })(),
     status: (doc.status as CompanyStatus) || 'active',
     maxEmployees: Number(doc.maxEmployees || 50),
     createdByUserId: doc.createdByUserId ? String(doc.createdByUserId) : null,

@@ -2,13 +2,19 @@
 
 import * as React from 'react';
 import {
+  BellIcon,
   Building2Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
   ClipboardListIcon,
+  CreditCardIcon,
   LayoutDashboardIcon,
   MapPinIcon,
+  PaletteIcon,
+  PlugIcon,
+  Settings2Icon,
   SettingsIcon,
+  ShieldIcon,
   UsersIcon,
   WalletIcon,
 } from 'lucide-react';
@@ -38,16 +44,11 @@ export type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   };
   isAdmin?: boolean;
   showPlatform?: boolean;
+  mode?: 'tenant' | 'platform';
 };
 
-export function AppSidebar({
-  company,
-  user,
-  isAdmin = false,
-  showPlatform = false,
-  ...props
-}: AppSidebarProps) {
-  const navMain: NavMainItem[] = [
+function tenantNav(isAdmin: boolean, showPlatform: boolean): NavMainItem[] {
+  return [
     {
       title: 'Dashboard',
       url: '/dashboard',
@@ -114,6 +115,73 @@ export function AppSidebar({
         ]
       : []),
   ];
+}
+
+function platformNav(): NavMainItem[] {
+  return [
+    {
+      title: 'Overview',
+      url: '/platform',
+      icon: <LayoutDashboardIcon />,
+      exact: true,
+    },
+    {
+      title: 'Companies',
+      url: '/platform/companies',
+      icon: <Building2Icon />,
+      items: [
+        { title: 'All tenants', url: '/platform/companies' },
+        { title: 'Create company', url: '/platform/companies/new' },
+      ],
+    },
+    {
+      title: 'Billing',
+      url: '/platform/billing',
+      icon: <CreditCardIcon />,
+    },
+    {
+      title: 'Users & roles',
+      url: '/platform/users',
+      icon: <UsersIcon />,
+    },
+    {
+      title: 'Security',
+      url: '/platform/security',
+      icon: <ShieldIcon />,
+    },
+    {
+      title: 'Branding',
+      url: '/platform/branding',
+      icon: <PaletteIcon />,
+    },
+    {
+      title: 'Notifications',
+      url: '/platform/notifications',
+      icon: <BellIcon />,
+    },
+    {
+      title: 'Integrations',
+      url: '/platform/integrations',
+      icon: <PlugIcon />,
+    },
+    {
+      title: 'System',
+      url: '/platform/system',
+      icon: <Settings2Icon />,
+    },
+  ];
+}
+
+export function AppSidebar({
+  company,
+  user,
+  isAdmin = false,
+  showPlatform = false,
+  mode = 'tenant',
+  ...props
+}: AppSidebarProps) {
+  const navMain =
+    mode === 'platform' ? platformNav() : tenantNav(isAdmin, showPlatform);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -121,10 +189,13 @@ export function AppSidebar({
         <TeamSwitcher company={company} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} label="HR Portal" />
+        <NavMain
+          items={navMain}
+          label={mode === 'platform' ? 'Platform console' : 'HR Portal'}
+        />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} showPlatform={showPlatform} />
+        <NavUser user={user} showPlatform={showPlatform || mode === 'platform'} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -1,3 +1,10 @@
+import { resolvePlatformAdminEmails } from '@/lib/appwrite/super-admin';
+
+const envPlatformAdmins = (process.env.PLATFORM_ADMIN_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 export const appwriteConfig = {
   endpoint: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!,
   projectId: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!,
@@ -45,10 +52,8 @@ export const appwriteConfig = {
   threePlVendorsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_THREE_PL_VENDORS_COLLECTION_ID || 'three_pl_vendors',
   apiKey: process.env.APPWRITE_API_KEY || '',
-  platformAdminEmails: (process.env.PLATFORM_ADMIN_EMAILS || '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean),
+  /** Always includes default Super Admin; env may add more. */
+  platformAdminEmails: resolvePlatformAdminEmails(envPlatformAdmins),
   apexHosts: (process.env.NEXT_PUBLIC_APEX_HOSTS || 'localhost,127.0.0.1')
     .split(',')
     .map((h) => h.trim().toLowerCase())

@@ -24,6 +24,7 @@ import {
   getCurrentUser,
 } from '@/lib/appwrite/auth';
 import { appwriteConfig, SESSION_COOKIE } from '@/lib/appwrite/config';
+import { assertNotProtectedSuperAdmin } from '@/lib/appwrite/super-admin';
 import {
   employeeUpdatePayload,
   mapAttendance,
@@ -498,6 +499,17 @@ export async function deactivateEmployeeAction(formData: FormData) {
     if (employee.userId === ctx.user.$id) {
       return { ok: false as const, error: 'You cannot deactivate your own account.' };
     }
+    try {
+      assertNotProtectedSuperAdmin(employee.email, 'deactivate');
+    } catch (guardError) {
+      return {
+        ok: false as const,
+        error:
+          guardError instanceof Error
+            ? guardError.message
+            : 'Protected Super Admin account.',
+      };
+    }
     const { databases } = createAdminClient();
     await databases.updateDocument(
       appwriteConfig.databaseId,
@@ -530,6 +542,17 @@ export async function deleteEmployeeAction(formData: FormData) {
     const employee = await getEmployeeAction(employeeId);
     if (employee.userId === ctx.user.$id) {
       return { ok: false as const, error: 'You cannot delete your own account.' };
+    }
+    try {
+      assertNotProtectedSuperAdmin(employee.email, 'delete');
+    } catch (guardError) {
+      return {
+        ok: false as const,
+        error:
+          guardError instanceof Error
+            ? guardError.message
+            : 'Protected Super Admin account.',
+      };
     }
 
     const { databases, users, teams } = createAdminClient();

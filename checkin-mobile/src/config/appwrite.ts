@@ -25,7 +25,7 @@ export const AppwriteConfig = {
     'attendance_regularizations',
   /** Next.js HR portal base URL for punch API */
   apiBaseUrl:
-    process.env.EXPO_PUBLIC_HR_API_BASE_URL ?? 'http://localhost:3000',
+    process.env.EXPO_PUBLIC_HR_API_BASE_URL ?? 'https://hrms.intoship.cloud',
   platform: process.env.EXPO_PUBLIC_APPWRITE_PLATFORM ?? 'com.ayersh009.checkinmobile',
 } as const;
 

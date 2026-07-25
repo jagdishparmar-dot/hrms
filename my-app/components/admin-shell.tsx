@@ -91,6 +91,7 @@ export async function AdminShell({
         user={user}
         isAdmin={isAdmin}
         showPlatform={showPlatform}
+        mode={mode}
       />
       <SidebarInset className="min-w-0 overflow-x-clip [--dashboard-header-height:--spacing(12)]">
         <header className="sticky top-0 z-50 flex h-12 shrink-0 items-center gap-2 border-b bg-background/50 backdrop-blur-md transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">

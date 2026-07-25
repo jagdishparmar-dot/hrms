@@ -70,7 +70,21 @@ NEXT_PUBLIC_APPWRITE_HOLIDAYS_COLLECTION_ID=holidays
 NEXT_PUBLIC_APPWRITE_SALARY_STRUCTURES_COLLECTION_ID=salary_structures
 NEXT_PUBLIC_APPWRITE_PAYROLL_RUNS_COLLECTION_ID=payroll_runs
 NEXT_PUBLIC_APPWRITE_PAYSLIPS_COLLECTION_ID=payslips
-PLATFORM_ADMIN_EMAILS=you@example.com
+PLATFORM_ADMIN_EMAILS=jagdish.parmar@coldverse.in,you@example.com
+```
+
+## Super Admin seed
+
+```bash
+node appwrite/seed-super-admin.mjs
+```
+
+Creates Auth user `jagdish.parmar@coldverse.in` if missing. Password from `SUPER_ADMIN_PASSWORD` or temporary `SuperAdmin!ChangeMe1`. The Next.js app always treats this email as platform admin (even if omitted from env) and blocks delete/deactivate of that account.
+
+After changing company `status` enum (adds `archived`), re-apply schema:
+
+```bash
+node appwrite/setup-schema.mjs
 ```
 
 ## Teams (runtime, not schema)

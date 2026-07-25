@@ -54,7 +54,7 @@ export const updateCompanyPlanSchema = z.object({
   companyId: z.string().min(1),
   plan: z.string().trim().min(1).max(32),
   maxEmployees: z.coerce.number().int().min(1).max(100000),
-  status: z.enum(['active', 'suspended', 'pending']),
+  status: z.enum(['active', 'suspended', 'pending', 'archived']),
   payroll3pl: z.coerce.boolean().optional(),
   geofencing: z.coerce.boolean().optional(),
   selfiePunch: z.coerce.boolean().optional(),

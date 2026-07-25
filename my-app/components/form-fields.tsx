@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,17 +22,52 @@ export function FormField({
   label,
   type = "text",
   className,
+  defaultValue,
+  value: valueProp,
+  onChange,
   ...props
 }: {
   name: string;
   label: string;
   type?: string;
   className?: string;
-} & Omit<ComponentProps<typeof Input>, "name" | "type" | "className">) {
+} & Omit<
+  ComponentProps<typeof Input>,
+  "name" | "type" | "className" | "defaultValue" | "value" | "onChange"
+> & {
+    defaultValue?: string | number | readonly string[];
+    value?: string | number | readonly string[];
+    onChange?: ComponentProps<typeof Input>["onChange"];
+  }) {
+  const isControlled = valueProp !== undefined;
+  const [value, setValue] = useState(() =>
+    String(isControlled ? valueProp : (defaultValue ?? "")),
+  );
+
+  useEffect(() => {
+    if (isControlled) {
+      setValue(String(valueProp));
+      return;
+    }
+    setValue(String(defaultValue ?? ""));
+  }, [defaultValue, isControlled, valueProp]);
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} type={type} {...props} />
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={(event) => {
+          if (!isControlled) {
+            setValue(event.target.value);
+          }
+          onChange?.(event);
+        }}
+        {...props}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ export const TENANT_ROLES = [
 
 export type TenantRole = (typeof TENANT_ROLES)[number];
 
-export type CompanyStatus = 'active' | 'suspended' | 'pending';
+export type CompanyStatus = 'active' | 'suspended' | 'pending' | 'archived';
 export type EmployeeStatus = 'active' | 'inactive' | 'invited';
 export type EmploymentType = 'Permanent' | '3PL' | 'Intern' | 'Consultant';
 export type AttendanceStatus =
@@ -30,6 +30,14 @@ export interface CompanyBranding {
   emailSenderName: string;
 }
 
+export interface CompanyModules {
+  attendance: boolean;
+  leave: boolean;
+  payroll: boolean;
+  shifts: boolean;
+  documents: boolean;
+}
+
 export interface CompanySettings {
   workWeek: string[];
   timezone: string;
@@ -39,6 +47,14 @@ export interface CompanySettings {
   designations: string[];
   lateGraceMinutes?: number;
   payCycleDay?: number;
+  /** Legal / business identity (platform + tenant editable) */
+  legalName?: string;
+  gstin?: string;
+  registeredAddress?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  dataRetentionDays?: number;
+  modules?: CompanyModules;
 }
 
 export interface CompanyFeatureFlags {
@@ -63,6 +79,12 @@ export interface Company {
   $createdAt?: string;
   $updatedAt?: string;
 }
+
+/** Platform console list row (company + usage metrics). */
+export type PlatformCompanyRow = Company & {
+  userCount: number;
+  activeUserCount: number;
+};
 
 export interface EmployeeMembership {
   id: string;
@@ -380,6 +402,14 @@ export const DEFAULT_BRANDING: CompanyBranding = {
   emailSenderName: 'HR Portal',
 };
 
+export const DEFAULT_MODULES: CompanyModules = {
+  attendance: true,
+  leave: true,
+  payroll: true,
+  shifts: true,
+  documents: true,
+};
+
 export const DEFAULT_SETTINGS: CompanySettings = {
   workWeek: ['mon', 'tue', 'wed', 'thu', 'fri'],
   timezone: 'Asia/Kolkata',
@@ -389,6 +419,13 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   designations: [],
   lateGraceMinutes: 15,
   payCycleDay: 1,
+  legalName: '',
+  gstin: '',
+  registeredAddress: '',
+  contactEmail: '',
+  contactPhone: '',
+  dataRetentionDays: 365,
+  modules: DEFAULT_MODULES,
 };
 
 export const DEFAULT_FEATURE_FLAGS: CompanyFeatureFlags = {

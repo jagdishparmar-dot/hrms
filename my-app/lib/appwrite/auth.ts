@@ -62,7 +62,12 @@ export async function getCurrentTenantContext(): Promise<{
   const resolved = await resolveActiveCompany(user.$id);
   if (!resolved?.company || !resolved.membership) return null;
   if (resolved.membership.status !== 'active') return null;
-  if (resolved.company.status === 'suspended') return null;
+  if (
+    resolved.company.status === 'suspended' ||
+    resolved.company.status === 'archived'
+  ) {
+    return null;
+  }
 
   return {
     user,
