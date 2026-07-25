@@ -1,0 +1,2730 @@
+{
+  "projectId": "6a620077001e71c1acde",
+  "projectName": "Employee Tracker HR Portal",
+  "endpoint": "https://appwrite.intoship.cloud/v1",
+  "databases": [
+    {
+      "$id": "hr_portal",
+      "name": "HR Portal",
+      "enabled": true
+    }
+  ],
+  "collections": [
+    {
+      "$id": "companies",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "companies",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "slug",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "teamId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "plan",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 32,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "featureFlags",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16385,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "branding",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16385,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "settings",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16385,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "suspended",
+            "pending"
+          ],
+          "format": "enum",
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "maxEmployees",
+          "type": "integer",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null,
+          "min": 1,
+          "max": 100000
+        },
+        {
+          "key": "createdByUserId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "slug_unique",
+          "type": "unique",
+          "status": "available",
+          "attributes": [
+            "slug"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "status"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "employees",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "employees",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "teamId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "email",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "format": "email",
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "role",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "company_admin",
+            "hr_manager",
+            "payroll_admin",
+            "reporting_manager",
+            "employee",
+            "vendor_admin"
+          ],
+          "format": "enum",
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive",
+            "invited"
+          ],
+          "format": "enum",
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "employeeCode",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 32,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "employmentType",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "elements": [
+            "Permanent",
+            "3PL",
+            "Intern",
+            "Consultant"
+          ],
+          "format": "enum",
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "vendorId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "department",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "designation",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "reportingManagerUserId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "dateOfJoining",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 10,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "grade",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 32,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "costCenter",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 32,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "phone",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 20,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "dateOfBirth",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 10,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "gender",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "bloodGroup",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 8,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "currentCity",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "currentState",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "emergencyContactName",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "emergencyContactPhone",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 20,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "panNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 10,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "aadhaarNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 12,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "uanNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 12,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "esiNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 20,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "pfAccountNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 32,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "bankName",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "bankIfsc",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 11,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "bankAccountNumber",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 34,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "primarySiteId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "alternateSiteIds",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16385,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "workShiftStart",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 5,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "workShiftEnd",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 5,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "shiftId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "mustChangePassword",
+          "type": "boolean",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "currentAddressLine1",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 256,
+          "default": null
+        },
+        {
+          "key": "currentAddressLine2",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 256,
+          "default": null
+        },
+        {
+          "key": "currentPincode",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 12,
+          "default": null
+        },
+        {
+          "key": "profilePictureFileId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "companyId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "userId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "userId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_user_unique",
+          "type": "unique",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "userId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "audit_logs",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "audit_logs",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "actorUserId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "action",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "entityType",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "entityId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null,
+          "encrypt": false
+        },
+        {
+          "key": "meta",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16385,
+          "default": null,
+          "encrypt": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "companyId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "actorUserId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "actorUserId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "sites",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "sites",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "lat",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "long",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "radiusMeters",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "address",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 512,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "companyId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "attendance_records",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "attendance_records",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "dateIso",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "dayOfWeek",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "formattedDate",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "clockInTime",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "clockInTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "clockOutTime",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "clockOutTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "totalMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "PRESENT",
+            "LATE",
+            "HALF_DAY",
+            "ABSENT",
+            "ON_LEAVE",
+            "LEAVE_PENDING"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "siteId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "geofenceStatus",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "elements": [
+            "INSIDE",
+            "OUTSIDE",
+            "UNKNOWN"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "distanceMeters",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchInLat",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchInLong",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchInAccuracy",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchOutLat",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchOutLong",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchOutAccuracy",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "deviceId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "note",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 512,
+          "default": null
+        },
+        {
+          "key": "locationName",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 256,
+          "default": null
+        },
+        {
+          "key": "leaveRequestId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "shiftId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "isOvernight",
+          "type": "boolean",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": false
+        },
+        {
+          "key": "scheduledStartTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "scheduledEndTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "earlyDeparture",
+          "type": "boolean",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": false
+        },
+        {
+          "key": "overtimeMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "assignmentSequence",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "segmentCount",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 0,
+          "min": null,
+          "max": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "dateIso"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "user_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "userId",
+            "dateIso"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId",
+            "dateIso"
+          ],
+          "orders": [
+            "ASC",
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "attendance_regularizations",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "attendance_regularizations",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "dateIso",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 1024,
+          "default": null
+        },
+        {
+          "key": "requestedClockIn",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "requestedClockOut",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "requestedOutDateIso",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "approverUserId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "reviewNote",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 512,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "leave_types",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "leave_types",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "code",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 32,
+          "default": null
+        },
+        {
+          "key": "paid",
+          "type": "boolean",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "accrualPerMonth",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "maxBalance",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "carryForward",
+          "type": "boolean",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "companyId_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "leave_balances",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "leave_balances",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "leaveTypeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "year",
+          "type": "integer",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "balance",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "emp_type_year_unique",
+          "type": "unique",
+          "status": "available",
+          "attributes": [
+            "employeeId",
+            "leaveTypeId",
+            "year"
+          ],
+          "orders": [
+            "ASC",
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "leave_requests",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "leave_requests",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "leaveTypeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "fromDate",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "toDate",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "days",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "pending",
+            "approved",
+            "rejected",
+            "cancelled"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "approverUserId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "note",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 1024,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "holidays",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "holidays",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "date",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "region",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "date"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "salary_structures",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "salary_structures",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "effectiveFrom",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "components",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 8192,
+          "default": null
+        },
+        {
+          "key": "ctcMonthly",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "payroll_runs",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "payroll_runs",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "month",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 7,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "draft",
+            "finalized"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "totals",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 4096,
+          "default": null
+        },
+        {
+          "key": "notes",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 2048,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_month_unique",
+          "type": "unique",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "month"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "payslips",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "payslips",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "payrollRunId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "breakdown",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 8192,
+          "default": null
+        },
+        {
+          "key": "fileId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "netPay",
+          "type": "float",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "month",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 7,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "run_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "payrollRunId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "employee_documents",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "employee_documents",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "category",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "profile_picture",
+            "identity",
+            "compliance",
+            "employment"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 256,
+          "default": null
+        },
+        {
+          "key": "fileId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "fileName",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 256,
+          "default": null
+        },
+        {
+          "key": "mimeType",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "fileSize",
+          "type": "integer",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null,
+          "min": 1,
+          "max": 10485760
+        },
+        {
+          "key": "uploadedByUserId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "archived"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "employee_category_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "employeeId",
+            "category"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "three_pl_vendors",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "three_pl_vendors",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "contactName",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "contactEmail",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "format": "email",
+          "default": null
+        },
+        {
+          "key": "contactPhone",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 32,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "shifts",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "shifts",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "name",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "code",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 32,
+          "default": null
+        },
+        {
+          "key": "shiftType",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "general",
+            "evening",
+            "night",
+            "rotational",
+            "cross_midnight"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "startTime",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 5,
+          "default": null
+        },
+        {
+          "key": "endTime",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 5,
+          "default": null
+        },
+        {
+          "key": "crossesMidnight",
+          "type": "boolean",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": false
+        },
+        {
+          "key": "punchInBeforeMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 120,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "punchInAfterMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 240,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "punchOutBeforeMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 120,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "punchOutAfterMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 240,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "lateGraceMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 15,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "earlyLeaveGraceMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 15,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "fullDayMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 480,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "halfDayMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 240,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "overtimeAfterMinutes",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 480,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "active",
+            "inactive"
+          ],
+          "format": "enum",
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_code_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "code"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "employee_shift_assignments",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "employee_shift_assignments",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "dateIso",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "shiftId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "sequence",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": 1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "siteId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "scheduled",
+            "cancelled"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "note",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 256,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_employee_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId",
+            "dateIso"
+          ],
+          "orders": [
+            "ASC",
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_date_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "dateIso"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "attendance_punch_segments",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "attendance_punch_segments",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "attendanceId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "dateIso",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "segmentIndex",
+          "type": "integer",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "clockInTime",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "clockInTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "clockOutTime",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "clockOutTimestamp",
+          "type": "integer",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": "siteId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "deviceId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "isOpen",
+          "type": "boolean",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": true
+        },
+        {
+          "key": "punchInLat",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchInLong",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchOutLat",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        },
+        {
+          "key": "punchOutLong",
+          "type": "float",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "attendance_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "attendanceId"
+          ],
+          "orders": [
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_open_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId",
+            "isOpen"
+          ],
+          "orders": [
+            "ASC",
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    }
+  ],
+  "buckets": [
+    {
+      "$id": "employee_documents",
+      "name": "Employee documents",
+      "enabled": true,
+      "fileSecurity": true,
+      "maximumFileSize": 10485760,
+      "allowedFileExtensions": [
+        "jpg",
+        "jpeg",
+        "png",
+        "webp",
+        "pdf"
+      ],
+      "compression": "none",
+      "encryption": false,
+      "antivirus": false,
+      "$permissions": []
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "cli": {
+    "version": ">= 21.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://appwrite.intoship.cloud/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "6a620077001e71c1acde",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "Attendance",
+        "EXPO_PUBLIC_APPWRITE_DATABASE_ID": "hr_portal",
+        "EXPO_PUBLIC_APPWRITE_EMPLOYEES_COLLECTION_ID": "employees",
+        "EXPO_PUBLIC_APPWRITE_ATTENDANCE_COLLECTION_ID": "attendance_records",
+        "EXPO_PUBLIC_APPWRITE_SITES_COLLECTION_ID": "sites",
+        "EXPO_PUBLIC_APPWRITE_PLATFORM": "com.ayersh009.checkinmobile"
+      }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://appwrite.intoship.cloud/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "6a620077001e71c1acde",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "Attendance",
+        "EXPO_PUBLIC_APPWRITE_DATABASE_ID": "hr_portal",
+        "EXPO_PUBLIC_APPWRITE_EMPLOYEES_COLLECTION_ID": "employees",
+        "EXPO_PUBLIC_APPWRITE_ATTENDANCE_COLLECTION_ID": "attendance_records",
+        "EXPO_PUBLIC_APPWRITE_SITES_COLLECTION_ID": "sites",
+        "EXPO_PUBLIC_APPWRITE_PLATFORM": "com.ayersh009.checkinmobile"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}
