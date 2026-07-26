@@ -46,11 +46,13 @@ export function middleware(request: NextRequest) {
   const isTenantApp =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/settings') ||
+    pathname.startsWith('/help') ||
     pathname.startsWith('/sites') ||
     pathname.startsWith('/employees') ||
     pathname.startsWith('/attendance') ||
     pathname.startsWith('/leave') ||
     pathname.startsWith('/payroll') ||
+    pathname.startsWith('/shifts') ||
     pathname.startsWith('/change-password');
 
   if ((isTenantApp || isPlatform) && !session) {
@@ -80,11 +82,13 @@ export const config = {
     '/change-password',
     '/dashboard/:path*',
     '/settings/:path*',
+    '/help/:path*',
     '/sites/:path*',
     '/employees/:path*',
     '/attendance/:path*',
     '/leave/:path*',
     '/payroll/:path*',
+    '/shifts/:path*',
     '/platform/:path*',
   ],
 };

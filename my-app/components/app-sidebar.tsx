@@ -9,6 +9,7 @@ import {
   ClipboardListIcon,
   CreditCardIcon,
   LayoutDashboardIcon,
+  LifeBuoyIcon,
   MapPinIcon,
   PaletteIcon,
   PlugIcon,
@@ -104,6 +105,11 @@ function tenantNav(isAdmin: boolean, showPlatform: boolean): NavMainItem[] {
             title: 'Settings',
             url: '/settings',
             icon: <SettingsIcon />,
+          },
+          {
+            title: 'Help & Support',
+            url: '/help',
+            icon: <LifeBuoyIcon />,
           },
         ]
       : []),

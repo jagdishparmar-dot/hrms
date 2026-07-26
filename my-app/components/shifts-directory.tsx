@@ -6,8 +6,10 @@ import { toast } from "sonner";
 
 import { FormSelect } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
+import { ShiftCatalogGuideTrigger } from "@/components/shift-catalog-guide";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -47,6 +49,9 @@ export function ShiftsDirectory({ shifts }: { shifts: WorkShift[] }) {
           <CardDescription>
             Define day, evening, night, and cross-midnight shifts with punch windows and grace.
           </CardDescription>
+          <CardAction>
+            <ShiftCatalogGuideTrigger />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <form
@@ -226,6 +231,9 @@ export function ShiftsDirectory({ shifts }: { shifts: WorkShift[] }) {
           <CardDescription>
             End time earlier than or equal to start time is treated as overnight (cross-midnight).
           </CardDescription>
+          <CardAction>
+            <ShiftCatalogGuideTrigger />
+          </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {shifts.length === 0 ? (
