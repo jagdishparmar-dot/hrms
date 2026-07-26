@@ -1,6 +1,11 @@
 import { AppwriteConfig } from '@/src/config/appwrite';
 import { authHeaders } from '@/src/services/apiClient';
-import type { TodayShiftInfo, TodayShiftSchedule } from '@/src/types';
+import type {
+  ShiftCatalogItem,
+  ShiftChangeRequest,
+  TodayShiftInfo,
+  TodayShiftSchedule,
+} from '@/src/types';
 
 const EMPTY_SCHEDULE: TodayShiftSchedule = {
   dateIso: '',
@@ -42,4 +47,53 @@ export async function fetchTodayShiftSchedule(
         }))
       : [],
   };
+}
+
+export async function fetchShiftCatalog(companyId: string | null): Promise<ShiftCatalogItem[]> {
+  if (!companyId) return [];
+
+  const headers = await authHeaders(companyId);
+  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/catalog`, { headers });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Unable to load shifts');
+  }
+
+  return Array.isArray(data.shifts) ? (data.shifts as ShiftCatalogItem[]) : [];
+}
+
+export async function submitShiftChangeRequest(
+  companyId: string | null,
+  payload: {
+    dateIso: string;
+    requestedShiftId: string;
+    reason: string;
+    sequence?: number;
+  },
+) {
+  if (!companyId) throw new Error('Company not selected');
+
+  const headers = await authHeaders(companyId);
+  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Shift change request failed');
+  return true;
+}
+
+export async function listShiftChangeRequests(
+  companyId: string | null,
+): Promise<ShiftChangeRequest[]> {
+  if (!companyId) return [];
+
+  const headers = await authHeaders(companyId);
+  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
+    headers,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Unable to load shift change requests');
+  return (data.requests ?? []) as ShiftChangeRequest[];
 }

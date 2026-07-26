@@ -21,11 +21,18 @@ import {
   RegularizationDialog,
   type RegularizationPreset,
 } from '@/src/components/RegularizationDialog';
+import { ShiftChangeDialog } from '@/src/components/ShiftChangeDialog';
 import { useScreenInsets } from '@/src/components/ScreenSafeArea';
 import { attendanceRepository } from '@/src/repositories/attendanceRepository';
+import { listShiftChangeRequests } from '@/src/repositories/shiftRepository';
 import { Colors } from '@/src/theme/colors';
 import { Fonts } from '@/src/theme/typography';
-import type { AttendanceRecord, MainUiState, RegularizationRequest } from '@/src/types';
+import type {
+  AttendanceRecord,
+  MainUiState,
+  RegularizationRequest,
+  ShiftChangeRequest,
+} from '@/src/types';
 import { formatDurationLabel, getTodayIso } from '@/src/utils/dateTime';
 
 interface AttendanceScreenProps {
@@ -126,6 +133,8 @@ export function AttendanceScreen({
     null,
   );
   const [regularizations, setRegularizations] = useState<RegularizationRequest[]>([]);
+  const [shiftChangeRequests, setShiftChangeRequests] = useState<ShiftChangeRequest[]>([]);
+  const [showShiftChangeDialog, setShowShiftChangeDialog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(true);
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
@@ -133,6 +142,15 @@ export function AttendanceScreen({
 
   const selectedMonthKey = monthPrefix(currentYear, currentMonthIndex);
   const monthLabel = `${MONTH_NAMES[currentMonthIndex]} ${currentYear}`;
+
+  const loadShiftChangeRequests = useCallback(async () => {
+    try {
+      const rows = await listShiftChangeRequests(uiState.userProfile.companyId ?? null);
+      setShiftChangeRequests(rows);
+    } catch {
+      /* best effort */
+    }
+  }, [uiState.userProfile.companyId]);
 
   const loadRegularizations = useCallback(async () => {
     try {
@@ -144,12 +162,13 @@ export function AttendanceScreen({
   }, []);
 
   const handleRefresh = useCallback(async () => {
-    await Promise.all([onRefresh?.(), loadRegularizations()]);
-  }, [loadRegularizations, onRefresh]);
+    await Promise.all([onRefresh?.(), loadRegularizations(), loadShiftChangeRequests()]);
+  }, [loadRegularizations, loadShiftChangeRequests, onRefresh]);
 
   useEffect(() => {
     loadRegularizations();
-  }, [loadRegularizations]);
+    loadShiftChangeRequests();
+  }, [loadRegularizations, loadShiftChangeRequests]);
 
   const handleSubmitRegularization = useCallback(
     async (payload: {
@@ -256,12 +275,20 @@ export function AttendanceScreen({
         title="Attendance"
         subtitle={monthLabel}
         right={
-          <Pressable
-            style={styles.headerAction}
-            onPress={() => openRegularization()}
-            hitSlop={8}>
-            <MaterialIcons name="edit-note" size={20} color="#fff" />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.headerAction}
+              onPress={() => setShowShiftChangeDialog(true)}
+              hitSlop={8}>
+              <MaterialIcons name="swap-horiz" size={20} color="#fff" />
+            </Pressable>
+            <Pressable
+              style={styles.headerAction}
+              onPress={() => openRegularization()}
+              hitSlop={8}>
+              <MaterialIcons name="edit-note" size={20} color="#fff" />
+            </Pressable>
+          </View>
         }
       />
 
@@ -406,6 +433,36 @@ export function AttendanceScreen({
               </View>
             ) : null}
 
+            {shiftChangeRequests.length > 0 ? (
+              <View style={styles.regCard}>
+                <Text style={styles.regTitle}>Shift change requests</Text>
+                {shiftChangeRequests.slice(0, 4).map((item) => (
+                  <View key={item.id} style={styles.regRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.regDate}>{item.dateIso}</Text>
+                      <Text style={styles.regReason} numberOfLines={1}>
+                        {item.reason}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.regStatus,
+                        {
+                          color:
+                            item.status === 'approved'
+                              ? Colors.statusPresent
+                              : item.status === 'rejected'
+                                ? Colors.destructive
+                                : Colors.statusLate,
+                        },
+                      ]}>
+                      {item.status.toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             <View style={styles.logHeader}>
               <View>
                 <Text style={styles.logTitle}>Activity log</Text>
@@ -431,6 +488,17 @@ export function AttendanceScreen({
         renderItem={({ item }) => (
           <AttendanceLogCard record={item} onPress={() => setSelectedRecord(item)} />
         )}
+      />
+
+      <ShiftChangeDialog
+        visible={showShiftChangeDialog}
+        companyId={uiState.userProfile.companyId ?? null}
+        currentShifts={uiState.todayShiftSchedule.shifts}
+        onDismiss={() => setShowShiftChangeDialog(false)}
+        onSubmitted={async () => {
+          await loadShiftChangeRequests();
+          Toast.show({ type: 'success', text1: 'Shift change request submitted' });
+        }}
       />
 
       <RegularizationDialog
@@ -907,6 +975,10 @@ function DetailTile({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   headerAction: {
     width: 40,
     height: 40,

@@ -16,40 +16,18 @@
     "scheme": "checkinmobile",
     "userInterfaceStyle": "light",
     "backgroundColor": "#312E81",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#312E81"
-    },
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/images/icon.png",
-      "splash": {
-        "image": "./assets/images/splash-icon.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#312E81"
-      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "CheckIn uses your location to verify you are within the office geofence when clocking in."
       }
     },
     "android": {
-      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#312E81",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "splash": {
-        "image": "./assets/images/splash-icon.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#312E81"
-      },
-      "statusBar": {
-        "backgroundColor": "#3730A3",
-        "barStyle": "light-content",
-        "translucent": false
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",

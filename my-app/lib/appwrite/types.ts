@@ -319,6 +319,27 @@ export interface AttendanceRegularization {
   employeeName?: string;
 }
 
+export interface ShiftChangeRequest {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  userId: string;
+  dateIso: string;
+  sequence: number;
+  currentShiftId: string;
+  currentAssignmentId: string;
+  requestedShiftId: string;
+  reason: string;
+  status: RegularizationStatus;
+  approverUserId: string;
+  reviewNote: string;
+  employeeName?: string;
+  currentShiftName?: string;
+  currentShiftCode?: string;
+  requestedShiftName?: string;
+  requestedShiftCode?: string;
+}
+
 export interface LeaveType {
   id: string;
   companyId: string;

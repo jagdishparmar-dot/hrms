@@ -181,6 +181,33 @@ const regs = {
   ],
 };
 
+const shiftChangeRequests = {
+  $id: 'shift_change_requests',
+  $permissions: [],
+  databaseId: 'hr_portal',
+  name: 'shift_change_requests',
+  enabled: true,
+  documentSecurity: true,
+  attributes: [
+    str('companyId', 64, true),
+    str('employeeId', 64, true),
+    str('userId', 64, true),
+    str('dateIso', 16, true),
+    num('sequence', true),
+    str('currentShiftId', 64),
+    str('currentAssignmentId', 64),
+    str('requestedShiftId', 64, true),
+    str('reason', 1024, true),
+    en('status', ['pending', 'approved', 'rejected'], true),
+    str('approverUserId', 64),
+    str('reviewNote', 512),
+  ],
+  indexes: [
+    idx('company_status_idx', ['companyId', 'status']),
+    idx('company_employee_idx', ['companyId', 'employeeId']),
+  ],
+};
+
 const leaveTypes = {
   $id: 'leave_types',
   $permissions: [],
@@ -322,6 +349,7 @@ for (const c of [
   sites,
   attendance,
   regs,
+  shiftChangeRequests,
   leaveTypes,
   leaveBalances,
   leaveRequests,

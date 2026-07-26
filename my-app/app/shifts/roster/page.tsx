@@ -2,11 +2,20 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PageHeader } from "@/components/page-header";
+import { ShiftChangeReview } from "@/components/shift-change-review";
 import { ShiftRoster } from "@/components/shift-roster";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   listEmployeesAction,
   listShiftAssignmentsAction,
+  listShiftChangeRequestsAction,
   listShiftsAction,
 } from "@/lib/appwrite/phase1-actions";
 import { pageMetadata } from "@/lib/site-metadata";
@@ -32,10 +41,11 @@ export default async function ShiftRosterPage({
     params.to ||
     `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [assignments, { employees }, shifts] = await Promise.all([
+  const [assignments, { employees }, shifts, shiftChangeRequests] = await Promise.all([
     listShiftAssignmentsAction({ from, to }),
     listEmployeesAction(),
     listShiftsAction(),
+    listShiftChangeRequestsAction(),
   ]);
 
   return (
@@ -57,6 +67,20 @@ export default async function ShiftRosterPage({
           </Button>
         }
       />
+      {shiftChangeRequests.length > 0 ? (
+        <Card className="shadow-xs">
+          <CardHeader>
+            <CardTitle className="text-sm">Pending shift change requests</CardTitle>
+            <CardDescription>
+              Approve to update the employee roster for the requested date. Punch windows follow
+              the updated assignment.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShiftChangeReview items={shiftChangeRequests} />
+          </CardContent>
+        </Card>
+      ) : null}
       <ShiftRoster
         assignments={assignments}
         employees={employees.filter((e) => e.status === "active")}

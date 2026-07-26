@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -16,12 +16,14 @@ import {
 import { Colors } from '@/src/theme/colors';
 import { Fonts } from '@/src/theme/typography';
 import {
+  dateFromPicker,
   dateToIso,
   formatDisplayDate,
   formatDisplayTime,
   formatTime,
   getTodayIso,
   isoToDate,
+  mergeTimeOntoDate,
   parseTimeOnDate,
 } from '@/src/utils/dateTime';
 
@@ -48,9 +50,7 @@ interface RegularizationDialogProps {
 }
 
 function defaultShiftTime(baseDate: Date, hours: number, minutes: number) {
-  const next = new Date(baseDate);
-  next.setHours(hours, minutes, 0, 0);
-  return next;
+  return mergeTimeOntoDate(baseDate, { hours, minutes });
 }
 
 export function RegularizationDialog({
@@ -67,10 +67,12 @@ export function RegularizationDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [activePicker, setActivePicker] = useState<PickerTarget | null>(null);
+  const [pickerDraft, setPickerDraft] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!visible) {
       setActivePicker(null);
+      setPickerDraft(null);
       return;
     }
 
@@ -96,66 +98,106 @@ export function RegularizationDialog({
     );
     setReason('');
     setActivePicker(null);
+    setPickerDraft(null);
   }, [visible, preset]);
 
-  const togglePicker = (target: PickerTarget) => {
-    setActivePicker((current) => (current === target ? null : target));
-  };
-
-  const closePickerOnAndroid = () => {
-    if (Platform.OS === 'android') {
-      setActivePicker(null);
+  const pickerValue = (
+    target: PickerTarget,
+    dates = { selectedDate, outDate, clockInTime, clockOutTime },
+  ) => {
+    if (target === 'date') return dates.selectedDate;
+    if (target === 'outDate') return dates.outDate;
+    if (target === 'clockIn') {
+      return dates.clockInTime ?? defaultShiftTime(dates.selectedDate, 9, 0);
     }
+    return dates.clockOutTime ?? defaultShiftTime(dates.outDate, 18, 0);
   };
 
   const applyPickerValue = (target: PickerTarget, value: Date) => {
     if (target === 'date') {
-      setSelectedDate(value);
-      if (!crossDayOut) setOutDate(value);
+      const nextDate = dateFromPicker(value);
+      setSelectedDate(nextDate);
+      if (!crossDayOut) setOutDate(nextDate);
       if (clockInTime) {
-        setClockInTime(parseTimeOnDate(formatTime(clockInTime), value));
+        setClockInTime(mergeTimeOntoDate(nextDate, clockInTime));
       }
       if (clockOutTime && !crossDayOut) {
-        setClockOutTime(parseTimeOnDate(formatTime(clockOutTime), value));
+        setClockOutTime(mergeTimeOntoDate(nextDate, clockOutTime));
       }
       return;
     }
 
     if (target === 'outDate') {
-      setOutDate(value);
+      const nextDate = dateFromPicker(value);
+      setOutDate(nextDate);
       if (clockOutTime) {
-        setClockOutTime(parseTimeOnDate(formatTime(clockOutTime), value));
+        setClockOutTime(mergeTimeOntoDate(nextDate, clockOutTime));
       }
       return;
     }
 
     if (target === 'clockIn') {
-      setClockInTime(parseTimeOnDate(formatTime(value), selectedDate));
+      setClockInTime(mergeTimeOntoDate(selectedDate, value));
       return;
     }
 
-    setClockOutTime(parseTimeOnDate(formatTime(value), outDate));
+    setClockOutTime(mergeTimeOntoDate(outDate, value));
   };
 
-  const handlePickerValueChange = (target: PickerTarget, value?: Date) => {
-    if (!value) {
-      closePickerOnAndroid();
+  const commitDraft = (target: PickerTarget, draft: Date | null) => {
+    if (draft) {
+      applyPickerValue(target, draft);
+    }
+  };
+
+  const openAndroidPicker = (target: PickerTarget) => {
+    const mode = target === 'clockIn' || target === 'clockOut' ? 'time' : 'date';
+    setActivePicker(target);
+
+    DateTimePickerAndroid.open({
+      value: pickerValue(target),
+      mode,
+      is24Hour: true,
+      maximumDate: mode === 'date' ? new Date() : undefined,
+      onValueChange: (_event, value) => {
+        setActivePicker(null);
+        applyPickerValue(target, value);
+      },
+      onDismiss: () => {
+        setActivePicker(null);
+      },
+    });
+  };
+
+  const togglePicker = (target: PickerTarget) => {
+    if (Platform.OS === 'android') {
+      openAndroidPicker(target);
       return;
     }
-    applyPickerValue(target, value);
-    closePickerOnAndroid();
-  };
 
-  const pickerValue = (target: PickerTarget) => {
-    if (target === 'date') return selectedDate;
-    if (target === 'outDate') return outDate;
-    if (target === 'clockIn') {
-      return clockInTime ?? defaultShiftTime(selectedDate, 9, 0);
-    }
-    return clockOutTime ?? defaultShiftTime(outDate, 2, 0);
+    setActivePicker((current) => {
+      if (current === target) {
+        commitDraft(target, pickerDraft);
+        setPickerDraft(null);
+        return null;
+      }
+
+      if (current && pickerDraft) {
+        commitDraft(current, pickerDraft);
+      }
+
+      setPickerDraft(pickerValue(target));
+      return target;
+    });
   };
 
   const submit = async () => {
+    if (Platform.OS === 'ios' && activePicker && pickerDraft) {
+      commitDraft(activePicker, pickerDraft);
+      setActivePicker(null);
+      setPickerDraft(null);
+    }
+
     setBusy(true);
     try {
       const shiftDate = dateToIso(selectedDate);
@@ -210,15 +252,16 @@ export function RegularizationDialog({
               active={activePicker === 'date'}
               onPress={() => togglePicker('date')}
             />
-            {activePicker === 'date' ? (
+            {Platform.OS === 'ios' && activePicker === 'date' ? (
               <View style={styles.pickerWrap}>
                 <DateTimePicker
-                  value={pickerValue('date')}
+                  value={pickerDraft ?? pickerValue('date')}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  display="spinner"
                   maximumDate={new Date()}
-                  onValueChange={(_event, value) => handlePickerValueChange('date', value)}
-                  onDismiss={closePickerOnAndroid}
+                  onValueChange={(_event, value) => {
+                    if (value) setPickerDraft(value);
+                  }}
                 />
               </View>
             ) : null}
@@ -231,12 +274,10 @@ export function RegularizationDialog({
                 if (!next) {
                   setOutDate(selectedDate);
                   if (clockOutTime) {
-                    setClockOutTime(
-                      parseTimeOnDate(formatTime(clockOutTime), selectedDate),
-                    );
+                    setClockOutTime(mergeTimeOntoDate(selectedDate, clockOutTime));
                   }
                 } else {
-                  const nextDay = new Date(selectedDate);
+                  const nextDay = dateFromPicker(selectedDate);
                   nextDay.setDate(nextDay.getDate() + 1);
                   setOutDate(nextDay);
                 }
@@ -260,17 +301,16 @@ export function RegularizationDialog({
                   active={activePicker === 'outDate'}
                   onPress={() => togglePicker('outDate')}
                 />
-                {activePicker === 'outDate' ? (
+                {Platform.OS === 'ios' && activePicker === 'outDate' ? (
                   <View style={styles.pickerWrap}>
                     <DateTimePicker
-                      value={pickerValue('outDate')}
+                      value={pickerDraft ?? pickerValue('outDate')}
                       mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      display="spinner"
                       maximumDate={new Date()}
-                      onValueChange={(_event, value) =>
-                        handlePickerValueChange('outDate', value)
-                      }
-                      onDismiss={closePickerOnAndroid}
+                      onValueChange={(_event, value) => {
+                        if (value) setPickerDraft(value);
+                      }}
                     />
                   </View>
                 ) : null}
@@ -311,17 +351,16 @@ export function RegularizationDialog({
               </View>
             </View>
 
-            {activePicker === 'clockIn' || activePicker === 'clockOut' ? (
+            {Platform.OS === 'ios' &&
+            (activePicker === 'clockIn' || activePicker === 'clockOut') ? (
               <View style={styles.pickerWrap}>
                 <DateTimePicker
-                  value={pickerValue(activePicker)}
+                  value={pickerDraft ?? pickerValue(activePicker)}
                   mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  is24Hour
-                  onValueChange={(_event, value) =>
-                    handlePickerValueChange(activePicker, value)
-                  }
-                  onDismiss={closePickerOnAndroid}
+                  display="spinner"
+                  onValueChange={(_event, value) => {
+                    if (value) setPickerDraft(value);
+                  }}
                 />
               </View>
             ) : null}

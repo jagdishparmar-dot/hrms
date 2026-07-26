@@ -1258,6 +1258,158 @@
       ]
     },
     {
+      "$id": "shift_change_requests",
+      "$permissions": [],
+      "databaseId": "hr_portal",
+      "name": "shift_change_requests",
+      "enabled": true,
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "companyId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "employeeId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "userId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "dateIso",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 16,
+          "default": null
+        },
+        {
+          "key": "sequence",
+          "type": "integer",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "min": 1,
+          "max": 10,
+          "default": null
+        },
+        {
+          "key": "currentShiftId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "currentAssignmentId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "requestedShiftId",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "size": 1024,
+          "default": null
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "status": "available",
+          "required": true,
+          "array": false,
+          "elements": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "format": "enum",
+          "default": null
+        },
+        {
+          "key": "approverUserId",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 64,
+          "default": null
+        },
+        {
+          "key": "reviewNote",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "size": 512,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_status_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "status"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        },
+        {
+          "key": "company_employee_idx",
+          "type": "key",
+          "status": "available",
+          "attributes": [
+            "companyId",
+            "employeeId"
+          ],
+          "orders": [
+            "ASC",
+            "ASC"
+          ]
+        }
+      ]
+    },
+    {
       "$id": "leave_types",
       "$permissions": [],
       "databaseId": "hr_portal",

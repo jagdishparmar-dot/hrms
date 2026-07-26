@@ -210,3 +210,28 @@ export interface RegularizationRequest {
   approverUserId: string;
   reviewNote: string;
 }
+
+export interface ShiftCatalogItem {
+  id: string;
+  name: string;
+  code: string;
+  shiftType: TodayShiftInfo['shiftType'];
+  startTime: string;
+  endTime: string;
+}
+
+export interface ShiftChangeRequest {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  userId: string;
+  dateIso: string;
+  sequence: number;
+  currentShiftId: string;
+  currentAssignmentId: string;
+  requestedShiftId: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approverUserId: string;
+  reviewNote: string;
+}

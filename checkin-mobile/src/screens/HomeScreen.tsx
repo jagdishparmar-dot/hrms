@@ -1,10 +1,21 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Toast from 'react-native-toast-message';
 import Animated, {
   cancelAnimation,
+  FadeIn,
+  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -13,10 +24,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ShiftChangeDialog } from '@/src/components/ShiftChangeDialog';
 import { useScreenInsets } from '@/src/components/ScreenSafeArea';
+import { listShiftChangeRequests } from '@/src/repositories/shiftRepository';
 import { Colors } from '@/src/theme/colors';
 import { Fonts } from '@/src/theme/typography';
-import type { MainUiState, TodayShiftInfo, TodayShiftSchedule } from '@/src/types';
+import type { MainUiState, ShiftChangeRequest, TodayShiftInfo, TodayShiftSchedule } from '@/src/types';
 import { formatDurationLabel } from '@/src/utils/dateTime';
 
 interface HomeScreenProps {
@@ -81,6 +94,27 @@ export function HomeScreen({
   const greeting = useMemo(() => greetingForHour(new Date().getHours()), []);
   const attendancePolicy = uiState.userProfile.attendancePolicy || 'geofenced';
   const selfPunchDisabled = attendancePolicy === 'manual';
+  const companyId = uiState.userProfile.companyId ?? null;
+  const [showShiftChangeDialog, setShowShiftChangeDialog] = useState(false);
+  const [shiftChangeRequests, setShiftChangeRequests] = useState<ShiftChangeRequest[]>([]);
+
+  const loadShiftRequests = useCallback(async () => {
+    try {
+      const rows = await listShiftChangeRequests(companyId);
+      setShiftChangeRequests(rows);
+    } catch {
+      /* best effort */
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    loadShiftRequests();
+  }, [loadShiftRequests]);
+
+  const handleShiftChangeSubmitted = useCallback(async () => {
+    await Promise.all([loadShiftRequests(), onRefresh?.()]);
+    Toast.show({ type: 'success', text1: 'Shift change request submitted' });
+  }, [loadShiftRequests, onRefresh]);
 
   const status = isCompleted
     ? {
@@ -161,7 +195,11 @@ export function HomeScreen({
           </View>
         </View>
 
-        <TodayAssignedShiftCard schedule={uiState.todayShiftSchedule} />
+        <TodayAssignedShiftCard
+          schedule={uiState.todayShiftSchedule}
+          pendingCount={shiftChangeRequests.filter((r) => r.status === 'pending').length}
+          onRequestChange={() => setShowShiftChangeDialog(true)}
+        />
 
         <View style={styles.ctaSection}>
           <Text style={styles.sectionHint}>{status.hint}</Text>
@@ -321,79 +359,191 @@ export function HomeScreen({
           </Pressable>
         )}
       </ScrollView>
+
+      <ShiftChangeDialog
+        visible={showShiftChangeDialog}
+        companyId={companyId}
+        currentShifts={uiState.todayShiftSchedule.shifts}
+        onDismiss={() => setShowShiftChangeDialog(false)}
+        onSubmitted={handleShiftChangeSubmitted}
+      />
     </View>
   );
 }
 
-function TodayAssignedShiftCard({ schedule }: { schedule: TodayShiftSchedule }) {
-  const shifts = schedule.shifts;
-  if (shifts.length === 0) return null;
+function shiftSummaryLine(shifts: TodayShiftInfo[]) {
+  if (shifts.length === 0) return 'No roster entry for today';
+  const primary = shifts[0];
+  const extra = shifts.length > 1 ? ` · +${shifts.length - 1} more` : '';
+  return `${primary.name} · ${primary.windowLabel}${extra}`;
+}
 
+function ShiftDetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.shiftDetailRow}>
+      <Text style={styles.shiftDetailLabel}>{label}</Text>
+      <Text style={styles.shiftDetailValue}>{value}</Text>
+    </View>
+  );
+}
+
+function TodayAssignedShiftCard({
+  schedule,
+  pendingCount = 0,
+  onRequestChange,
+}: {
+  schedule: TodayShiftSchedule;
+  pendingCount?: number;
+  onRequestChange?: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const shifts = schedule.shifts;
   const fromRoster = shifts.some((shift) => shift.source === 'roster');
+  const hasShifts = shifts.length > 0;
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((current) => !current);
+  }, []);
+
+  const summary = shiftSummaryLine(shifts);
+  const sourceLabel = hasShifts ? (fromRoster ? 'Roster' : 'Default') : 'Unassigned';
 
   return (
     <View style={styles.assignedShiftCard}>
-      <View style={styles.assignedShiftHeader}>
+      <Pressable
+        style={({ pressed }) => [styles.shiftAccordionHeader, pressed && styles.shiftAccordionHeaderPressed]}
+        onPress={toggleExpanded}
+        android_ripple={{ color: Colors.ripple }}>
         <View style={styles.assignedShiftIcon}>
           <MaterialIcons name="event-available" size={20} color={Colors.secondary} />
         </View>
-        <View style={styles.assignedShiftHeaderText}>
-          <Text style={styles.assignedShiftTitle}>{"Today's assigned shift"}</Text>
-          <Text style={styles.assignedShiftSubtitle}>
-            {fromRoster ? 'Scheduled on roster' : 'Default work schedule'}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.sourceBadge,
-            fromRoster ? styles.sourceBadgeRoster : styles.sourceBadgeDefault,
-          ]}>
-          <Text
-            style={[
-              styles.sourceBadgeText,
-              fromRoster ? styles.sourceBadgeTextRoster : styles.sourceBadgeTextDefault,
-            ]}>
-            {fromRoster ? 'Roster' : 'Default'}
-          </Text>
-        </View>
-      </View>
 
-      {shifts.map((shift, index) => {
-        const tone = shiftTypeTone(shift.shiftType);
-        return (
-          <View
-            key={`${shift.assignmentId || shift.shiftId}-${shift.sequence}`}
-            style={[styles.shiftRow, index > 0 ? styles.shiftRowDivider : null]}>
-            <View style={styles.shiftRowMain}>
-              <View style={styles.shiftTitleRow}>
-                <Text style={styles.shiftName} numberOfLines={1}>
-                  {shift.name}
-                </Text>
-                {shift.code ? (
-                  <View style={styles.shiftCodeChip}>
-                    <Text style={styles.shiftCodeText}>{shift.code}</Text>
-                  </View>
-                ) : null}
-                {shifts.length > 1 ? (
-                  <View style={styles.sequenceChip}>
-                    <Text style={styles.sequenceChipText}>#{shift.sequence}</Text>
-                  </View>
-                ) : null}
-              </View>
-              <View style={styles.shiftMetaRow}>
-                <MaterialIcons name="schedule" size={14} color={Colors.secondary} />
-                <Text style={styles.shiftWindow}>{shift.windowLabel}</Text>
-                <View style={[styles.typeBadge, { backgroundColor: tone.bg }]}>
-                  <Text style={[styles.typeBadgeText, { color: tone.text }]}>
-                    {shiftTypeLabel(shift.shiftType)}
-                  </Text>
-                </View>
-              </View>
-              {shift.note ? <Text style={styles.shiftNote}>{shift.note}</Text> : null}
+        <View style={styles.shiftAccordionHeaderBody}>
+          <View style={styles.shiftAccordionTitleRow}>
+            <Text style={styles.assignedShiftTitle}>
+              {hasShifts ? "Today's assigned shift" : 'Shift schedule'}
+            </Text>
+            <View
+              style={[
+                styles.sourceBadge,
+                fromRoster ? styles.sourceBadgeRoster : styles.sourceBadgeDefault,
+              ]}>
+              <Text
+                style={[
+                  styles.sourceBadgeText,
+                  fromRoster ? styles.sourceBadgeTextRoster : styles.sourceBadgeTextDefault,
+                ]}>
+                {sourceLabel}
+              </Text>
             </View>
           </View>
-        );
-      })}
+
+          {!expanded ? (
+            <Text style={styles.shiftAccordionSummary} numberOfLines={2}>
+              {summary}
+            </Text>
+          ) : (
+            <Text style={styles.shiftAccordionSummaryMuted}>
+              {hasShifts
+                ? fromRoster
+                  ? 'Scheduled on roster'
+                  : 'Using default work schedule'
+                : 'Request a shift change if you need a different slot'}
+            </Text>
+          )}
+        </View>
+
+        <MaterialIcons
+          name={expanded ? 'expand-less' : 'expand-more'}
+          size={24}
+          color={Colors.mutedForeground}
+        />
+      </Pressable>
+
+      {expanded ? (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          style={styles.shiftAccordionBody}>
+          {hasShifts ? (
+            shifts.map((shift, index) => {
+              const tone = shiftTypeTone(shift.shiftType);
+              return (
+                <View
+                  key={`${shift.assignmentId || shift.shiftId}-${shift.sequence}`}
+                  style={[styles.shiftAccordionPanel, index > 0 ? styles.shiftAccordionPanelDivider : null]}>
+                  {shifts.length > 1 ? (
+                    <View style={styles.shiftPanelHeading}>
+                      <Text style={styles.shiftPanelTitle}>Shift {shift.sequence}</Text>
+                      {shift.code ? (
+                        <View style={styles.shiftCodeChip}>
+                          <Text style={styles.shiftCodeText}>{shift.code}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : (
+                    <View style={styles.shiftPanelHeading}>
+                      <Text style={styles.shiftPanelTitle}>{shift.name}</Text>
+                      {shift.code ? (
+                        <View style={styles.shiftCodeChip}>
+                          <Text style={styles.shiftCodeText}>{shift.code}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+
+                  <ShiftDetailRow label="Schedule" value={shift.windowLabel} />
+                  <ShiftDetailRow
+                    label="Timing"
+                    value={`${shift.startTime} – ${shift.endTime}`}
+                  />
+                  <View style={styles.shiftDetailRow}>
+                    <Text style={styles.shiftDetailLabel}>Type</Text>
+                    <View style={[styles.typeBadge, { backgroundColor: tone.bg }]}>
+                      <Text style={[styles.typeBadgeText, { color: tone.text }]}>
+                        {shiftTypeLabel(shift.shiftType)}
+                      </Text>
+                    </View>
+                  </View>
+                  <ShiftDetailRow
+                    label="Source"
+                    value={shift.source === 'roster' ? 'Shift roster' : 'Employee default'}
+                  />
+                  {shift.note ? <ShiftDetailRow label="Note" value={shift.note} /> : null}
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.shiftEmptyBody}>
+              <MaterialIcons name="info-outline" size={18} color={Colors.mutedForeground} />
+              <Text style={styles.shiftEmptyText}>
+                HR has not rostered a shift for today. Your default schedule may still apply at
+                punch-in, or you can request a change below.
+              </Text>
+            </View>
+          )}
+
+          {onRequestChange ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.shiftChangeFooter,
+                styles.shiftChangeFooterInAccordion,
+                pressed && { opacity: 0.92 },
+              ]}
+              onPress={onRequestChange}
+              android_ripple={{ color: Colors.ripple }}>
+              <MaterialIcons name="swap-horiz" size={18} color={Colors.secondary} />
+              <Text style={styles.shiftChangeFooterText}>Request shift change</Text>
+              {pendingCount > 0 ? (
+                <View style={styles.pendingBadge}>
+                  <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+                </View>
+              ) : null}
+              <MaterialIcons name="chevron-right" size={20} color={Colors.mutedForeground} />
+            </Pressable>
+          ) : null}
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -642,15 +792,99 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
-  assignedShiftHeader: {
+  shiftAccordionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     backgroundColor: Colors.secondaryLight,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+  },
+  shiftAccordionHeaderPressed: {
+    opacity: 0.94,
+  },
+  shiftAccordionHeaderBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  shiftAccordionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  shiftAccordionSummary: {
+    fontSize: 13,
+    fontFamily: Fonts.semibold,
+    color: Colors.foreground,
+    lineHeight: 18,
+  },
+  shiftAccordionSummaryMuted: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.mutedForeground,
+    lineHeight: 16,
+  },
+  shiftAccordionBody: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  shiftAccordionPanel: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  shiftAccordionPanelDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  shiftPanelHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 2,
+  },
+  shiftPanelTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.bold,
+    color: Colors.foreground,
+  },
+  shiftDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  shiftDetailLabel: {
+    flexShrink: 0,
+    width: 88,
+    fontSize: 12,
+    fontFamily: Fonts.medium,
+    color: Colors.mutedForeground,
+  },
+  shiftDetailValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 13,
+    fontFamily: Fonts.semibold,
+    color: Colors.foreground,
+  },
+  shiftEmptyBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  shiftEmptyText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.mutedForeground,
+    lineHeight: 19,
   },
   assignedShiftIcon: {
     width: 36,
@@ -660,20 +894,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  assignedShiftHeaderText: {
-    flex: 1,
-    minWidth: 0,
-  },
   assignedShiftTitle: {
     fontSize: 14,
     fontFamily: Fonts.bold,
     color: Colors.foreground,
-  },
-  assignedShiftSubtitle: {
-    marginTop: 2,
-    fontSize: 11,
-    fontFamily: Fonts.regular,
-    color: Colors.mutedForeground,
   },
   sourceBadge: {
     borderRadius: 999,
@@ -698,29 +922,6 @@ const styles = StyleSheet.create({
   sourceBadgeTextDefault: {
     color: Colors.mutedForeground,
   },
-  shiftRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  shiftRowDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.border,
-  },
-  shiftRowMain: {
-    gap: 6,
-  },
-  shiftTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  shiftName: {
-    flexShrink: 1,
-    fontSize: 15,
-    fontFamily: Fonts.bold,
-    color: Colors.foreground,
-  },
   shiftCodeChip: {
     borderRadius: 999,
     backgroundColor: Colors.primaryDeep,
@@ -733,31 +934,6 @@ const styles = StyleSheet.create({
     color: Colors.primaryForeground,
     letterSpacing: 0.3,
   },
-  sequenceChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.muted,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  sequenceChipText: {
-    fontSize: 10,
-    fontFamily: Fonts.bold,
-    color: Colors.mutedForeground,
-  },
-  shiftMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  shiftWindow: {
-    fontSize: 13,
-    fontFamily: Fonts.semibold,
-    color: Colors.foreground,
-    fontVariant: ['tabular-nums'],
-  },
   typeBadge: {
     borderRadius: 999,
     paddingHorizontal: 8,
@@ -767,10 +943,38 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: Fonts.bold,
   },
-  shiftNote: {
+  shiftChangeFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.card,
+  },
+  shiftChangeFooterInAccordion: {
+    marginTop: 0,
+  },
+  shiftChangeFooterText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.semibold,
+    color: Colors.secondary,
+  },
+  pendingBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.warningLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  pendingBadgeText: {
     fontSize: 11,
-    fontFamily: Fonts.regular,
-    color: Colors.mutedForeground,
+    fontFamily: Fonts.bold,
+    color: '#B45309',
   },
   ctaSection: {
     marginTop: 20,

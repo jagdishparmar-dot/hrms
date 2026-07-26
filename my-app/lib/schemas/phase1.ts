@@ -198,6 +198,19 @@ export const reviewRegularizationSchema = z.object({
   reviewNote: z.string().trim().max(512).optional().or(z.literal('')),
 });
 
+export const shiftChangeRequestSchema = z.object({
+  dateIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  requestedShiftId: z.string().min(1),
+  reason: z.string().trim().min(3).max(1024),
+  sequence: z.coerce.number().min(1).max(10).default(1),
+});
+
+export const reviewShiftChangeRequestSchema = z.object({
+  requestId: z.string().min(1),
+  decision: z.enum(['approved', 'rejected']),
+  reviewNote: z.string().trim().max(512).optional().or(z.literal('')),
+});
+
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(256),

@@ -47,9 +47,26 @@ export function parseTimeOnDate(hhMm: string, baseDate: Date): Date | null {
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
   if (hours > 23 || minutes > 59) return null;
-  const next = new Date(baseDate);
-  next.setHours(hours, minutes, 0, 0);
-  return next;
+  return mergeTimeOntoDate(baseDate, { hours, minutes });
+}
+
+/** Normalize a calendar day to local noon (stable base for time pickers). */
+export function dateFromPicker(value: Date): Date {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0, 0);
+}
+
+/** Apply picked clock time onto a shift/out date without string round-trips. */
+export function mergeTimeOntoDate(
+  baseDate: Date,
+  picked: Date | { hours: number; minutes: number },
+): Date {
+  const merged = dateFromPicker(baseDate);
+  if (picked instanceof Date) {
+    merged.setHours(picked.getHours(), picked.getMinutes(), 0, 0);
+  } else {
+    merged.setHours(picked.hours, picked.minutes, 0, 0);
+  }
+  return merged;
 }
 
 export function formatDisplayDate(date: Date): string {

@@ -1,6 +1,7 @@
 import type {
   AttendanceRecord,
   AttendanceRegularization,
+  ShiftChangeRequest,
   AttendanceStatus,
   AuditLog,
   Company,
@@ -282,6 +283,24 @@ export function mapRegularization(doc: Record<string, unknown>): AttendanceRegul
     requestedClockIn: String(doc.requestedClockIn || ''),
     requestedClockOut: String(doc.requestedClockOut || ''),
     requestedOutDateIso: String(doc.requestedOutDateIso || ''),
+    status: (doc.status as RegularizationStatus) || 'pending',
+    approverUserId: String(doc.approverUserId || ''),
+    reviewNote: String(doc.reviewNote || ''),
+  };
+}
+
+export function mapShiftChangeRequest(doc: Record<string, unknown>): ShiftChangeRequest {
+  return {
+    id: String(doc.$id),
+    companyId: String(doc.companyId || ''),
+    employeeId: String(doc.employeeId || ''),
+    userId: String(doc.userId || ''),
+    dateIso: String(doc.dateIso || ''),
+    sequence: Number(doc.sequence || 1),
+    currentShiftId: String(doc.currentShiftId || ''),
+    currentAssignmentId: String(doc.currentAssignmentId || ''),
+    requestedShiftId: String(doc.requestedShiftId || ''),
+    reason: String(doc.reason || ''),
     status: (doc.status as RegularizationStatus) || 'pending',
     approverUserId: String(doc.approverUserId || ''),
     reviewNote: String(doc.reviewNote || ''),

@@ -29,6 +29,9 @@ export const appwriteConfig = {
   regularizationsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_REGULARIZATIONS_COLLECTION_ID ||
     'attendance_regularizations',
+  shiftChangeRequestsCollectionId:
+    process.env.NEXT_PUBLIC_APPWRITE_SHIFT_CHANGE_REQUESTS_COLLECTION_ID ||
+    'shift_change_requests',
   leaveTypesCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_LEAVE_TYPES_COLLECTION_ID || 'leave_types',
   leaveBalancesCollectionId:

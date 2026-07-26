@@ -4,6 +4,11 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ID, Query } from 'node-appwrite';
 
+import {
+  enrichShiftChangeRequests,
+  listPendingShiftChangeRequests,
+  reviewShiftChangeRequest,
+} from '@/lib/appwrite/shift-change-requests';
 import { writeAuditLog } from '@/lib/appwrite/audit';
 import {
   assignLeaveBalance,
@@ -111,6 +116,7 @@ import type {
   ThreePlVendor,
   WorkShift,
   EmployeeShiftAssignment,
+  ShiftChangeRequest,
 } from '@/lib/appwrite/types';
 import {
   addDaysIso,
@@ -134,6 +140,7 @@ import {
   resetEmployeePasswordSchema,
   reviewLeaveSchema,
   reviewRegularizationSchema,
+  reviewShiftChangeRequestSchema,
   salaryStructureSchema,
   setEmployeeLoginAccessSchema,
   shiftAssignmentSchema,
@@ -1180,6 +1187,45 @@ export async function upsertShiftAssignmentAction(formData: FormData) {
     return { ok: true as const };
   } catch (error) {
     return { ok: false as const, error: toErrorMessage(error, 'Unable to save roster entry.') };
+  }
+}
+
+export async function listShiftChangeRequestsAction(): Promise<ShiftChangeRequest[]> {
+  const ctx = await requireCompanyAdmin();
+  const [rows, employees, shifts] = await Promise.all([
+    listPendingShiftChangeRequests(ctx.company.id),
+    listEmployeesAction(),
+    listShiftsAction(),
+  ]);
+  return enrichShiftChangeRequests(
+    ctx.company.id,
+    rows,
+    employees.employees.map((e) => ({ id: e.id, name: e.name })),
+    shifts,
+  );
+}
+
+export async function reviewShiftChangeRequestAction(formData: FormData) {
+  const ctx = await requireCompanyAdmin();
+  const parsed = reviewShiftChangeRequestSchema.safeParse({
+    requestId: formData.get('requestId'),
+    decision: formData.get('decision'),
+    reviewNote: formData.get('reviewNote') || '',
+  });
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message || 'Invalid input.' };
+  }
+
+  try {
+    return await reviewShiftChangeRequest({
+      company: ctx.company,
+      approverUserId: ctx.user.$id,
+      requestId: parsed.data.requestId,
+      decision: parsed.data.decision,
+      reviewNote: parsed.data.reviewNote,
+    });
+  } catch (error) {
+    return { ok: false as const, error: toErrorMessage(error, 'Unable to review request.') };
   }
 }
 
