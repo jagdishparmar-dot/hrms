@@ -37,15 +37,24 @@ export type NavMainItem = {
 export function NavMain({
   items,
   label = 'Menu',
+  accent = 'indigo',
 }: {
   items: NavMainItem[];
   label?: string;
+  accent?: 'indigo' | 'rose';
 }) {
   const pathname = usePathname();
 
+  const iconTone =
+    accent === 'rose'
+      ? '[&_svg]:text-rose-600 dark:[&_svg]:text-rose-400'
+      : '[&_svg]:text-indigo-600 dark:[&_svg]:text-indigo-400';
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupLabel className="px-2 text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const hasChildren = Boolean(item.items?.length);
@@ -61,6 +70,12 @@ export function NavMain({
                 <SidebarMenuButton
                   isActive={active}
                   tooltip={item.title}
+                  className={cn(
+                    'rounded-xl text-sidebar-foreground/80',
+                    !active && iconTone,
+                    !active &&
+                      'hover:bg-sidebar-accent/80 hover:text-sidebar-foreground',
+                  )}
                   render={<Link href={item.url} />}
                 >
                   {item.icon}
@@ -78,7 +93,18 @@ export function NavMain({
               render={<SidebarMenuItem />}
             >
               <CollapsibleTrigger
-                render={<SidebarMenuButton tooltip={item.title} isActive={active} />}
+                render={
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={active}
+                    className={cn(
+                      'rounded-xl text-sidebar-foreground/80',
+                      !active && iconTone,
+                      !active &&
+                        'hover:bg-sidebar-accent/80 hover:text-sidebar-foreground',
+                    )}
+                  />
+                }
               >
                 {item.icon}
                 <span>{item.title}</span>
@@ -89,11 +115,12 @@ export function NavMain({
                 />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <SidebarMenuSub>
+                <SidebarMenuSub className="mr-0 border-l border-sidebar-border/80">
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton
                         isActive={pathname === subItem.url}
+                        className="rounded-lg text-sidebar-foreground/70 hover:text-sidebar-foreground"
                         render={<Link href={subItem.url} />}
                       >
                         <span>{subItem.title}</span>

@@ -19,7 +19,14 @@ export type AttendanceStatus =
   | 'ABSENT'
   | 'ON_LEAVE'
   | 'LEAVE_PENDING';
-export type GeofenceStatus = 'INSIDE' | 'OUTSIDE' | 'UNKNOWN';
+export type GeofenceStatus = 'INSIDE' | 'OUTSIDE' | 'UNKNOWN' | 'GPS_ONLY';
+export type AttendancePolicy = 'geofenced' | 'gps_logged' | 'manual';
+
+export const ATTENDANCE_POLICY_LABELS: Record<AttendancePolicy, string> = {
+  geofenced: 'Geofenced (office/site)',
+  gps_logged: 'Field / GPS logged',
+  manual: 'Manual (HR marks)',
+};
 export type RegularizationStatus = 'pending' | 'approved' | 'rejected';
 export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type PayrollRunStatus = 'draft' | 'finalized';
@@ -131,6 +138,8 @@ export interface EmployeeMembership {
   bankAccountNumber: string;
   primarySiteId: string;
   alternateSiteIds: string[];
+  /** How mobile self-punch is validated. Defaults to geofenced when unset. */
+  attendancePolicy: AttendancePolicy;
   workShiftStart: string;
   workShiftEnd: string;
   /** Optional FK to `shifts` collection; empty falls back to workShiftStart/End. */
@@ -139,6 +148,20 @@ export interface EmployeeMembership {
   $createdAt?: string;
   $updatedAt?: string;
 }
+
+/** Login metadata shown to HR admins on the employee profile. */
+export type EmployeeLoginInfo = {
+  userId: string;
+  email: string;
+  role: TenantRole;
+  employeeStatus: EmployeeStatus;
+  authUserActive: boolean;
+  emailVerified: boolean;
+  mustChangePassword: boolean;
+  lastAccessAt: string | null;
+  registeredAt: string | null;
+  loginAllowed: boolean;
+};
 
 export type EmployeeDocumentCategory =
   | 'profile_picture'

@@ -9,10 +9,51 @@ export type CompanyMembership = {
   role: string;
 };
 
+const JWT_CACHE_TTL_MS = 10 * 60 * 1000;
+
+let cachedJwt: { token: string; expiresAt: number } | null = null;
+let jwtInFlight: Promise<string> | null = null;
+
+export function clearAuthCache() {
+  cachedJwt = null;
+  jwtInFlight = null;
+}
+
+async function resolveJwtToken(): Promise<string> {
+  const now = Date.now();
+  if (cachedJwt && cachedJwt.expiresAt > now) {
+    return cachedJwt.token;
+  }
+
+  if (jwtInFlight) {
+    return jwtInFlight;
+  }
+
+  jwtInFlight = (async () => {
+    const jwt = await account.createJWT();
+    cachedJwt = {
+      token: jwt.jwt,
+      expiresAt: Date.now() + JWT_CACHE_TTL_MS,
+    };
+    return jwt.jwt;
+  })();
+
+  try {
+    return await jwtInFlight;
+  } finally {
+    jwtInFlight = null;
+  }
+}
+
+/** Prefetch JWT so punch requests skip an extra round-trip. */
+export async function warmAuthHeaders(companyId?: string | null) {
+  await authHeaders(companyId);
+}
+
 async function authHeaders(companyId?: string | null) {
-  const jwt = await account.createJWT();
+  const token = await resolveJwtToken();
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${jwt.jwt}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
   if (companyId) {

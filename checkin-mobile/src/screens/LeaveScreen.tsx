@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   tabChipActive: {
-    backgroundColor: 'rgba(46, 107, 230, 0.12)',
+    backgroundColor: Colors.secondaryLight,
     borderColor: Colors.secondary,
   },
   tabChipText: {
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(46, 107, 230, 0.12)',
+    backgroundColor: Colors.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   },
   typeChipActive: {
     borderColor: Colors.secondary,
-    backgroundColor: 'rgba(46, 107, 230, 0.12)',
+    backgroundColor: Colors.secondaryLight,
   },
   typeChipText: {
     fontSize: 12,

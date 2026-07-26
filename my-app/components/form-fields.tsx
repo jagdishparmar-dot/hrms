@@ -65,6 +65,60 @@ export function FormField({
   );
 }
 
+const FILTER_ALL_VALUE = "__all__";
+
+export function FilterSelect({
+  id,
+  label,
+  value,
+  onValueChange,
+  options,
+  allLabel,
+  className,
+  size = "default",
+}: {
+  id?: string;
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  allLabel?: string;
+  className?: string;
+  size?: "sm" | "default";
+}) {
+  const selectValue = value ? value : allLabel ? FILTER_ALL_VALUE : null;
+
+  return (
+    <div className={cn("grid gap-1.5", className)}>
+      <Label htmlFor={id}>{label}</Label>
+      <Select
+        value={selectValue}
+        onValueChange={(next) => {
+          if (!next || next === FILTER_ALL_VALUE) {
+            onValueChange("");
+            return;
+          }
+          onValueChange(next);
+        }}
+      >
+        <SelectTrigger id={id} size={size} className="w-full">
+          <SelectValue placeholder={allLabel || "Select…"} />
+        </SelectTrigger>
+        <SelectContent>
+          {allLabel ? (
+            <SelectItem value={FILTER_ALL_VALUE}>{allLabel}</SelectItem>
+          ) : null}
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function FormSelect({
   name,
   label,

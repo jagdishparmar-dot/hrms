@@ -35,6 +35,10 @@ function mapApiEmployeeToProfile(
     geofenceRadiusMeters: geofence.geofenceRadiusMeters,
     lastKnownDistanceMeters: geofence.lastKnownDistanceMeters,
     isWithinGeofence: geofence.isWithinGeofence,
+    attendancePolicy:
+      employee.attendancePolicy === 'gps_logged' || employee.attendancePolicy === 'manual'
+        ? employee.attendancePolicy
+        : 'geofenced',
     mustChangePassword: Boolean(employee.mustChangePassword),
     workShiftStart: String(employee.workShiftStart || '09:00'),
     workShiftEnd: String(employee.workShiftEnd || '18:00'),

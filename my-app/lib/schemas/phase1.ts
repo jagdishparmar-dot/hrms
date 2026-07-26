@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const employmentTypeEnum = z.enum(['Permanent', '3PL', 'Intern', 'Consultant']);
+const attendancePolicyEnum = z.enum(['geofenced', 'gps_logged', 'manual']);
 
 function validateOrgConfigValue(
   value: string | undefined,
@@ -44,7 +45,8 @@ export const createEmployeeSchema = z
     department: z.string().trim().max(128).optional().or(z.literal('')),
     designation: z.string().trim().max(128).optional().or(z.literal('')),
     phone: z.string().trim().min(5, "Phone is required").max(32),
-    primarySiteId: z.string().min(1, "Primary site is required"),
+    attendancePolicy: attendancePolicyEnum.default('geofenced'),
+    primarySiteId: z.string().optional().or(z.literal('')),
     workShiftStart: z.string().trim().min(1, "Start time is required").default('09:00'),
     workShiftEnd: z.string().trim().min(1, "End time is required").default('18:00'),
     shiftId: z.string().trim().min(1, "Shift is required").max(64),
@@ -52,6 +54,13 @@ export const createEmployeeSchema = z
   })
   .superRefine((data, ctx) => {
     validateVendorForEmploymentType(data.employmentType, data.vendorId, ctx);
+    if (data.attendancePolicy === 'geofenced' && !data.primarySiteId?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Primary site is required for geofenced attendance.',
+        path: ['primarySiteId'],
+      });
+    }
   });
 
 export const updateEmployeeSchema = z
@@ -86,6 +95,7 @@ export const updateEmployeeSchema = z
     bankIfsc: z.string().optional().or(z.literal('')),
     bankAccountNumber: z.string().optional().or(z.literal('')),
     primarySiteId: z.string().optional().or(z.literal('')),
+    attendancePolicy: attendancePolicyEnum.optional(),
     workShiftStart: z.string().optional().or(z.literal('')),
     workShiftEnd: z.string().optional().or(z.literal('')),
     shiftId: z.string().trim().max(64).optional().or(z.literal('')),
@@ -96,6 +106,14 @@ export const updateEmployeeSchema = z
   })
   .superRefine((data, ctx) => {
     validateVendorForEmploymentType(data.employmentType, data.vendorId, ctx);
+    const policy = data.attendancePolicy ?? 'geofenced';
+    if (policy === 'geofenced' && data.primarySiteId !== undefined && !data.primarySiteId.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Primary site is required for geofenced attendance.',
+        path: ['primarySiteId'],
+      });
+    }
   });
 
 export { validateOrgConfigValue };
@@ -170,6 +188,10 @@ export const generateRosterSchema = z.object({
   pattern: z.string().trim().min(1).max(1024),
 });
 
+export const shiftRosterCsvImportSchema = z.object({
+  fileName: z.string().trim().max(256).optional().or(z.literal('')),
+});
+
 export const reviewRegularizationSchema = z.object({
   regularizationId: z.string().min(1),
   decision: z.enum(['approved', 'rejected']),
@@ -179,6 +201,27 @@ export const reviewRegularizationSchema = z.object({
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(256),
+});
+
+export const resetEmployeePasswordSchema = z
+  .object({
+    employeeId: z.string().min(1),
+    newPassword: z.string().min(8).max(256),
+    confirmPassword: z.string().min(8).max(256),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  });
+
+export const setEmployeeLoginAccessSchema = z.object({
+  employeeId: z.string().min(1),
+  blocked: z
+    .string()
+    .refine((value) => value === 'true' || value === 'false', {
+      message: 'Invalid blocked flag.',
+    })
+    .transform((value) => value === 'true'),
 });
 
 export const leaveTypeSchema = z.object({

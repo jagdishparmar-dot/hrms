@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import { FormSelect } from '@/components/form-fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -55,19 +56,16 @@ export function EmployeeDocumentsPanel({
               router.refresh();
             });
           }}>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Category</span>
-            <select
-              name="category"
-              required
-              className="h-9 rounded-md border border-input bg-transparent px-3">
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FormSelect
+            name="category"
+            label="Category"
+            required
+            defaultValue="profile_picture"
+            options={Object.entries(CATEGORY_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+          />
           <label className="grid gap-1.5 text-sm">
             <span className="font-medium">Title</span>
             <input

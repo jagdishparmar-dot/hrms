@@ -133,6 +133,7 @@ export async function provisionCompany(
       phone: '',
       primarySiteId: '',
       alternateSiteIds: '[]',
+      attendancePolicy: 'geofenced',
       workShiftStart: '09:00',
       workShiftEnd: '18:00',
       shiftId: '',

@@ -374,7 +374,7 @@ function PickerField({
     <Pressable
       style={[styles.pickerField, active && styles.pickerFieldActive]}
       onPress={onPress}
-      android_ripple={{ color: 'rgba(46,107,230,0.08)' }}>
+      android_ripple={{ color: Colors.ripple }}>
       <View style={styles.pickerFieldIcon}>
         <MaterialIcons name={icon} size={18} color={Colors.secondary} />
       </View>
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(46, 107, 230, 0.12)',
+    backgroundColor: Colors.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: 'rgba(46, 107, 230, 0.1)',
+    backgroundColor: Colors.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },

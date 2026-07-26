@@ -22,6 +22,7 @@ import Toast from 'react-native-toast-message';
 import { AppOverlays } from '@/src/components/AppOverlays';
 import { AttendanceProvider } from '@/src/hooks/AttendanceProvider';
 import { AuthProvider, useAuth } from '@/src/hooks/AuthProvider';
+import { useOtaUpdates } from '@/src/hooks/useOtaUpdates';
 import { Colors } from '@/src/theme/colors';
 import '@/src/lib/appwrite';
 
@@ -61,6 +62,7 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  useOtaUpdates();
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(Colors.background);

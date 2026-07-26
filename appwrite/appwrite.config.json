@@ -590,6 +590,20 @@
           "array": false,
           "size": 64,
           "default": null
+        },
+        {
+          "key": "attendancePolicy",
+          "type": "string",
+          "status": "available",
+          "required": false,
+          "array": false,
+          "elements": [
+            "geofenced",
+            "gps_logged",
+            "manual"
+          ],
+          "format": "enum",
+          "default": null
         }
       ],
       "indexes": [
@@ -969,7 +983,8 @@
           "elements": [
             "INSIDE",
             "OUTSIDE",
-            "UNKNOWN"
+            "UNKNOWN",
+            "GPS_ONLY"
           ],
           "format": "enum",
           "default": null
@@ -1065,81 +1080,6 @@
           "array": false,
           "size": 64,
           "default": null
-        },
-        {
-          "key": "shiftId",
-          "type": "string",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "size": 64,
-          "default": null
-        },
-        {
-          "key": "isOvernight",
-          "type": "boolean",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": false
-        },
-        {
-          "key": "scheduledStartTimestamp",
-          "type": "integer",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": null,
-          "min": null,
-          "max": null
-        },
-        {
-          "key": "scheduledEndTimestamp",
-          "type": "integer",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": null,
-          "min": null,
-          "max": null
-        },
-        {
-          "key": "earlyDeparture",
-          "type": "boolean",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": false
-        },
-        {
-          "key": "overtimeMinutes",
-          "type": "integer",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": 0,
-          "min": null,
-          "max": null
-        },
-        {
-          "key": "assignmentSequence",
-          "type": "integer",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": 1,
-          "min": null,
-          "max": null
-        },
-        {
-          "key": "segmentCount",
-          "type": "integer",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "default": 0,
-          "min": null,
-          "max": null
         }
       ],
       "indexes": [
@@ -1178,21 +1118,6 @@
             "dateIso"
           ],
           "orders": [
-            "ASC",
-            "ASC"
-          ]
-        },
-        {
-          "key": "company_employee_date_idx",
-          "type": "key",
-          "status": "available",
-          "attributes": [
-            "companyId",
-            "employeeId",
-            "dateIso"
-          ],
-          "orders": [
-            "ASC",
             "ASC",
             "ASC"
           ]
@@ -1263,15 +1188,6 @@
         },
         {
           "key": "requestedClockOut",
-          "type": "string",
-          "status": "available",
-          "required": false,
-          "array": false,
-          "size": 16,
-          "default": null
-        },
-        {
-          "key": "requestedOutDateIso",
           "type": "string",
           "status": "available",
           "required": false,

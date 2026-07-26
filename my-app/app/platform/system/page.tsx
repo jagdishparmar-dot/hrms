@@ -1,6 +1,12 @@
+import { Cpu, Settings2 } from 'lucide-react';
+
 import { AdminShell } from '@/components/admin-shell';
-import { PageHeader } from '@/components/page-header';
-import { PlatformSection } from '@/components/platform/platform-section';
+import {
+  PlatformInfoList,
+  PlatformKeyValueList,
+  PlatformPageBanner,
+  PlatformSection,
+} from '@/components/platform/platform-section';
 import { requirePlatformAdmin } from '@/lib/appwrite/auth';
 import { appwriteConfig } from '@/lib/appwrite/config';
 import { DEFAULT_SUPER_ADMIN_EMAIL } from '@/lib/appwrite/super-admin';
@@ -8,7 +14,8 @@ import { pageMetadata } from '@/lib/site-metadata';
 
 export const metadata = pageMetadata({
   title: 'System',
-  description: 'Platform system configuration, database IDs, and environment health.',
+  description:
+    'Platform system configuration, database IDs, and environment health.',
   path: '/platform/system',
 });
 
@@ -17,65 +24,79 @@ export default async function PlatformSystemPage() {
 
   return (
     <AdminShell mode="platform" title="System" subtitle="Configuration">
-      <PageHeader
-        title="System configuration"
-        description="Runtime platform parameters relevant to multi-tenant operations."
-      />
+      <div className="flex flex-col gap-6">
+        <PlatformPageBanner
+          badge="Runtime"
+          title="System configuration"
+          description="Runtime platform parameters relevant to multi-tenant operations."
+          icon={Settings2}
+        />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PlatformSection title="Environment">
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Appwrite project</dt>
-              <dd className="font-mono text-xs">{appwriteConfig.projectId}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Database</dt>
-              <dd className="font-mono text-xs">{appwriteConfig.databaseId}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Apex hosts</dt>
-              <dd className="text-right text-xs">
-                {appwriteConfig.apexHosts.join(', ')}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Late grace default</dt>
-              <dd>{appwriteConfig.lateGraceMinutes} min</dd>
-            </div>
-          </dl>
-        </PlatformSection>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PlatformSection title="Environment" icon={Cpu}>
+            <PlatformKeyValueList
+              items={[
+                {
+                  label: 'Appwrite project',
+                  value: appwriteConfig.projectId,
+                  mono: true,
+                },
+                {
+                  label: 'Database',
+                  value: appwriteConfig.databaseId,
+                  mono: true,
+                },
+                {
+                  label: 'Apex hosts',
+                  value: appwriteConfig.apexHosts.join(', '),
+                  mono: true,
+                },
+                {
+                  label: 'Late grace default',
+                  value: `${appwriteConfig.lateGraceMinutes} min`,
+                },
+              ]}
+            />
+          </PlatformSection>
 
-        <PlatformSection title="Super Admin">
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Default email</dt>
-              <dd className="text-right">{DEFAULT_SUPER_ADMIN_EMAIL}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Allowlisted admins</dt>
-              <dd>{appwriteConfig.platformAdminEmails.length}</dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Seed with <code>node appwrite/seed-super-admin.mjs</code>. The default
-            email is always treated as platform admin even if omitted from env.
-          </p>
+          <PlatformSection title="Super Admin" icon={Settings2}>
+            <PlatformKeyValueList
+              items={[
+                {
+                  label: 'Default email',
+                  value: DEFAULT_SUPER_ADMIN_EMAIL,
+                },
+                {
+                  label: 'Allowlisted admins',
+                  value: appwriteConfig.platformAdminEmails.length,
+                },
+              ]}
+            />
+            <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+              Seed with{' '}
+              <code className="text-rose-300">node appwrite/seed-super-admin.mjs</code>.
+              The default email is always treated as platform admin even if omitted
+              from env.
+            </p>
+          </PlatformSection>
+        </div>
+
+        <PlatformSection
+          title="SaaS operations checklist"
+          description="Aligned with multi-tenant onboarding / lifecycle."
+          icon={Settings2}
+        >
+          <PlatformInfoList
+            items={[
+              'Provision company (Auth + Team + company doc + admin membership).',
+              'Configure branding, modules, attendance/payroll defaults.',
+              'Activate tenant; monitor usage from company detail metrics.',
+              'Suspend or archive with confirmation when required.',
+              'Review audit trail for configuration changes.',
+            ]}
+          />
         </PlatformSection>
       </div>
-
-      <PlatformSection
-        title="SaaS operations checklist"
-        description="Aligned with multi-tenant onboarding / lifecycle."
-      >
-        <ol className="list-inside list-decimal space-y-1 text-sm text-muted-foreground">
-          <li>Provision company (Auth + Team + company doc + admin membership).</li>
-          <li>Configure branding, modules, attendance/payroll defaults.</li>
-          <li>Activate tenant; monitor usage from company detail metrics.</li>
-          <li>Suspend or archive with confirmation when required.</li>
-          <li>Review audit trail for configuration changes.</li>
-        </ol>
-      </PlatformSection>
     </AdminShell>
   );
 }

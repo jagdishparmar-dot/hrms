@@ -27,7 +27,13 @@ export const metadata = pageMetadata({
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+    status?: string;
+    type?: string;
+    size?: string;
+  }>;
 }) {
   const { q = "" } = await searchParams;
   const ctx = await requireCompanyAdmin();

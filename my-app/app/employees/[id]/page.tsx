@@ -15,6 +15,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { EditEmployeeForm, SalaryStructureForm } from "@/components/employee-forms";
 import { EmployeeDocumentsPanel } from "@/components/employee-documents";
 import { EmployeeDetailActions } from "@/components/employee-detail-actions";
+import { EmployeeLoginPanel } from "@/components/employee-login-panel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { requireCompanyAdmin } from "@/lib/appwrite/auth";
+import { ATTENDANCE_POLICY_LABELS } from "@/lib/appwrite/types";
 import {
   getEmployeeAction,
+  getEmployeeLoginInfoAction,
   getSalaryStructureAction,
   listAttendanceAction,
   listEmployeeDocumentsAction,
@@ -105,15 +108,18 @@ export default async function EmployeeDetailPage({
   } catch {
     notFound();
   }
-  const [sites, shifts, salary, attendanceResult, documents, vendors] = await Promise.all([
+  const [sites, shifts, salary, attendanceResult, documents, vendors, loginResult] =
+    await Promise.all([
     listSitesAction(),
     listShiftsAction(),
     getSalaryStructureAction(id),
     listAttendanceAction({ userId: employee.userId, page: 1, pageSize: 15 }),
     listEmployeeDocumentsAction(id),
     listThreePlVendorsAction(),
+    getEmployeeLoginInfoAction(id),
   ]);
   const attendance = attendanceResult.rows;
+  const loginInfo = loginResult.ok ? loginResult.info : null;
 
   const primarySite = sites.find((s) => s.id === employee.primarySiteId);
 
@@ -141,6 +147,9 @@ export default async function EmployeeDetailPage({
                   </Badge>
                   <Badge variant="outline" className={typeBadgeClass(employee.employmentType || "Permanent")}>
                     {employee.employmentType || "Permanent"}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {ATTENDANCE_POLICY_LABELS[employee.attendancePolicy || "geofenced"]}
                   </Badge>
                 </div>
                 <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
@@ -209,6 +218,7 @@ export default async function EmployeeDetailPage({
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="login">Login & access</TabsTrigger>
           <TabsTrigger value="compensation">Compensation & Docs</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
         </TabsList>
@@ -232,6 +242,24 @@ export default async function EmployeeDetailPage({
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="login" className="outline-none">
+          {loginInfo ? (
+            <EmployeeLoginPanel
+              employeeId={employee.id}
+              employeeName={employee.name}
+              loginInfo={loginInfo}
+            />
+          ) : (
+            <Card className="shadow-xs">
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                {loginResult.ok === false
+                  ? loginResult.error
+                  : "Unable to load login information."}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="compensation" className="outline-none">

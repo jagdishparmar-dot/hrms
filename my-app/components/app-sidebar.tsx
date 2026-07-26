@@ -15,6 +15,7 @@ import {
   Settings2Icon,
   SettingsIcon,
   ShieldIcon,
+  Sparkles,
   UsersIcon,
   WalletIcon,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 export type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   company: {
@@ -178,24 +180,53 @@ export function AppSidebar({
   isAdmin = false,
   showPlatform = false,
   mode = 'tenant',
+  className,
   ...props
 }: AppSidebarProps) {
   const navMain =
     mode === 'platform' ? platformNav() : tenantNav(isAdmin, showPlatform);
+  const isPlatform = mode === 'platform';
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <TeamSwitcher company={company} />
+    <Sidebar
+      collapsible="icon"
+      className={cn('border-border', className)}
+      {...props}
+    >
+      <SidebarHeader className="border-b border-sidebar-border p-3">
+        <TeamSwitcher company={company} mode={mode} />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-2 py-3">
         <NavMain
           items={navMain}
-          label={mode === 'platform' ? 'Platform console' : 'HR Portal'}
+          label={isPlatform ? 'Platform console' : 'HR Portal'}
+          accent={isPlatform ? 'rose' : 'indigo'}
         />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} showPlatform={showPlatform || mode === 'platform'} />
+      <SidebarFooter className="border-t border-sidebar-border p-3">
+        <div className="mb-2 hidden px-2 group-data-[collapsible=icon]:hidden md:block">
+          <div
+            className={cn(
+              'flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-mono text-muted-foreground',
+              isPlatform
+                ? 'border-rose-500/20 bg-rose-500/5'
+                : 'border-indigo-500/20 bg-indigo-500/5',
+            )}
+          >
+            <Sparkles
+              className={cn(
+                'size-3 shrink-0',
+                isPlatform ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400',
+              )}
+            />
+            <span>Slate canvas · {isPlatform ? 'Rose' : 'Indigo'} accent</span>
+          </div>
+        </div>
+        <NavUser
+          user={user}
+          showPlatform={showPlatform || mode === 'platform'}
+          accent={isPlatform ? 'rose' : 'indigo'}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

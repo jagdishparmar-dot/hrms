@@ -1,6 +1,7 @@
 import type { AttendanceStatus, EmployeeMembership } from '@/lib/appwrite/types';
 
 export const REGISTER_PAGE_SIZE = 50;
+export const REGISTER_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 export const REGISTER_EXPORT_MAX = 2000;
 
 export type RegisterCellCode = 'P' | 'LT' | 'E' | 'AB' | 'L' | 'OFF' | 'HD' | '';

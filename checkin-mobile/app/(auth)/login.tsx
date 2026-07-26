@@ -143,7 +143,7 @@ export default function LoginScreen() {
                 <MaterialIcons
                   name="mail-outline"
                   size={20}
-                  color={focused === 'email' ? Colors.secondary : '#8FA3B8'}
+                  color={focused === 'email' ? Colors.secondary : Colors.iconMuted}
                 />
                 <TextInput
                   style={styles.input}
@@ -176,7 +176,7 @@ export default function LoginScreen() {
                 <MaterialIcons
                   name="lock-outline"
                   size={20}
-                  color={focused === 'password' ? Colors.secondary : '#8FA3B8'}
+                  color={focused === 'password' ? Colors.secondary : Colors.iconMuted}
                 />
                 <TextInput
                   style={styles.input}
@@ -196,7 +196,7 @@ export default function LoginScreen() {
                   <MaterialIcons
                     name={showPassword ? 'visibility-off' : 'visibility'}
                     size={20}
-                    color="#8FA3B8"
+                    color={Colors.iconMuted}
                   />
                 </Pressable>
               </View>

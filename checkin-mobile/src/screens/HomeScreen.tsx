@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScreenInsets } from '@/src/components/ScreenSafeArea';
 import { Colors } from '@/src/theme/colors';
 import { Fonts } from '@/src/theme/typography';
-import type { MainUiState } from '@/src/types';
+import type { MainUiState, TodayShiftInfo, TodayShiftSchedule } from '@/src/types';
 import { formatDurationLabel } from '@/src/utils/dateTime';
 
 interface HomeScreenProps {
@@ -32,6 +32,35 @@ function greetingForHour(hour: number) {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+function shiftTypeLabel(type: TodayShiftInfo['shiftType']) {
+  switch (type) {
+    case 'evening':
+      return 'Evening';
+    case 'night':
+      return 'Night';
+    case 'cross_midnight':
+      return 'Cross-midnight';
+    case 'rotational':
+      return 'Rotational';
+    default:
+      return 'General';
+  }
+}
+
+function shiftTypeTone(type: TodayShiftInfo['shiftType']) {
+  switch (type) {
+    case 'evening':
+      return { bg: Colors.warningLight, text: '#B45309' };
+    case 'night':
+    case 'cross_midnight':
+      return { bg: '#EDE9FE', text: '#5B21B6' };
+    case 'rotational':
+      return { bg: Colors.secondaryLight, text: Colors.primaryDeep };
+    default:
+      return { bg: Colors.secondaryLight, text: Colors.secondary };
+  }
 }
 
 export function HomeScreen({
@@ -50,13 +79,15 @@ export function HomeScreen({
 
   const firstName = uiState.userProfile.name.split(' ')[0] || uiState.userProfile.name;
   const greeting = useMemo(() => greetingForHour(new Date().getHours()), []);
+  const attendancePolicy = uiState.userProfile.attendancePolicy || 'geofenced';
+  const selfPunchDisabled = attendancePolicy === 'manual';
 
   const status = isCompleted
     ? {
         label: 'Completed',
         hint: 'Shift closed for today',
         color: Colors.headerSubtitle,
-        bg: 'rgba(139,175,199,0.22)',
+        bg: Colors.secondaryLight,
         icon: 'done-all' as const,
       }
     : isClockedIn
@@ -71,9 +102,11 @@ export function HomeScreen({
         }
       : {
           label: 'Off duty',
-          hint: 'Tap below to clock in',
-          color: Colors.accent,
-          bg: 'rgba(245,166,35,0.18)',
+          hint: selfPunchDisabled
+            ? 'Self punch disabled — contact HR'
+            : 'Tap below to clock in',
+          color: Colors.secondary,
+          bg: Colors.secondaryLight,
           icon: 'schedule' as const,
         };
 
@@ -128,17 +161,21 @@ export function HomeScreen({
           </View>
         </View>
 
+        <TodayAssignedShiftCard schedule={uiState.todayShiftSchedule} />
+
         <View style={styles.ctaSection}>
           <Text style={styles.sectionHint}>{status.hint}</Text>
           <ClockActionButton
             isClockedIn={isClockedIn}
             isCompleted={isCompleted}
             isLoading={uiState.isClockInLoading}
+            disabled={selfPunchDisabled}
+            disabledHint="Self punch disabled"
             onPress={onClockClick}
           />
         </View>
 
-        <Text style={styles.sectionTitle}>{"Today's shift"}</Text>
+        <Text style={styles.sectionTitle}>{"Today's attendance"}</Text>
         <View style={styles.metricsCard}>
           <MetricCell
             icon="login"
@@ -164,19 +201,35 @@ export function HomeScreen({
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Site verification</Text>
-        {!uiState.hasLocationPermission ? (
+        <Text style={styles.sectionTitle}>
+          {attendancePolicy === 'gps_logged' ? 'Location logging' : 'Site verification'}
+        </Text>
+        {selfPunchDisabled ? (
+          <View style={styles.permissionCard}>
+            <View style={[styles.permissionIcon, { backgroundColor: Colors.mutedForeground }]}>
+              <MaterialIcons name="block" size={22} color="#fff" />
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>Self punch disabled</Text>
+              <Text style={styles.cardSubtitle}>
+                HR marks attendance for your account. Use regularization if you need a correction.
+              </Text>
+            </View>
+          </View>
+        ) : !uiState.hasLocationPermission ? (
           <Pressable
             style={styles.permissionCard}
             onPress={onRequestLocationPermission}
-            android_ripple={{ color: 'rgba(26,58,107,0.08)' }}>
+            android_ripple={{ color: Colors.ripple }}>
             <View style={styles.permissionIcon}>
               <MaterialIcons name="my-location" size={22} color="#fff" />
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle}>Enable location</Text>
               <Text style={styles.cardSubtitle}>
-                Required to verify you are within the office geofence
+                {attendancePolicy === 'gps_logged'
+                  ? 'Required to log GPS coordinates when you punch'
+                  : 'Required to verify you are within the office geofence'}
               </Text>
             </View>
             <View style={styles.ctaPill}>
@@ -188,43 +241,159 @@ export function HomeScreen({
           <Pressable
             style={styles.locationCard}
             onPress={onLocationClick}
-            android_ripple={{ color: 'rgba(46,107,230,0.08)' }}>
+            android_ripple={{ color: Colors.ripple }}>
             <View
               style={[
                 styles.locationIcon,
-                { backgroundColor: withinFence ? Colors.successLight : Colors.destructiveLight },
+                {
+                  backgroundColor:
+                    attendancePolicy === 'gps_logged'
+                      ? Colors.secondaryLight
+                      : withinFence
+                        ? Colors.successLight
+                        : Colors.destructiveLight,
+                },
               ]}>
               <MaterialIcons
-                name={withinFence ? 'gps-fixed' : 'gps-off'}
+                name={
+                  attendancePolicy === 'gps_logged'
+                    ? 'travel-explore'
+                    : withinFence
+                      ? 'gps-fixed'
+                      : 'gps-off'
+                }
                 size={22}
-                color={withinFence ? Colors.success : Colors.destructive}
+                color={
+                  attendancePolicy === 'gps_logged'
+                    ? Colors.secondary
+                    : withinFence
+                      ? Colors.success
+                      : Colors.destructive
+                }
               />
             </View>
             <View style={styles.cardBody}>
               <View style={styles.locationTitleRow}>
                 <Text style={styles.cardTitle} numberOfLines={1}>
-                  {uiState.userProfile.officeLocation}
+                  {attendancePolicy === 'gps_logged'
+                    ? 'Field / GPS logged'
+                    : uiState.userProfile.officeLocation}
                 </Text>
                 <View
                   style={[
                     styles.fenceBadge,
-                    { backgroundColor: withinFence ? Colors.successLight : Colors.destructiveLight },
+                    {
+                      backgroundColor:
+                        attendancePolicy === 'gps_logged'
+                          ? Colors.secondaryLight
+                          : withinFence
+                            ? Colors.successLight
+                            : Colors.destructiveLight,
+                    },
                   ]}>
                   <Text
                     style={[
                       styles.fenceBadgeText,
-                      { color: withinFence ? Colors.success : Colors.destructive },
+                      {
+                        color:
+                          attendancePolicy === 'gps_logged'
+                            ? Colors.secondary
+                            : withinFence
+                              ? Colors.success
+                              : Colors.destructive,
+                      },
                     ]}>
-                    {withinFence ? 'Inside' : 'Outside'}
+                    {attendancePolicy === 'gps_logged'
+                      ? 'Any location'
+                      : withinFence
+                        ? 'Inside'
+                        : 'Outside'}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.cardSubtitle}>{distanceLabel} · tap for details</Text>
+              <Text style={styles.cardSubtitle}>
+                {attendancePolicy === 'gps_logged'
+                  ? 'GPS is recorded on punch · tap for details'
+                  : `${distanceLabel} · tap for details`}
+              </Text>
             </View>
             <MaterialIcons name="chevron-right" size={22} color={Colors.mutedForeground} />
           </Pressable>
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+function TodayAssignedShiftCard({ schedule }: { schedule: TodayShiftSchedule }) {
+  const shifts = schedule.shifts;
+  if (shifts.length === 0) return null;
+
+  const fromRoster = shifts.some((shift) => shift.source === 'roster');
+
+  return (
+    <View style={styles.assignedShiftCard}>
+      <View style={styles.assignedShiftHeader}>
+        <View style={styles.assignedShiftIcon}>
+          <MaterialIcons name="event-available" size={20} color={Colors.secondary} />
+        </View>
+        <View style={styles.assignedShiftHeaderText}>
+          <Text style={styles.assignedShiftTitle}>{"Today's assigned shift"}</Text>
+          <Text style={styles.assignedShiftSubtitle}>
+            {fromRoster ? 'Scheduled on roster' : 'Default work schedule'}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.sourceBadge,
+            fromRoster ? styles.sourceBadgeRoster : styles.sourceBadgeDefault,
+          ]}>
+          <Text
+            style={[
+              styles.sourceBadgeText,
+              fromRoster ? styles.sourceBadgeTextRoster : styles.sourceBadgeTextDefault,
+            ]}>
+            {fromRoster ? 'Roster' : 'Default'}
+          </Text>
+        </View>
+      </View>
+
+      {shifts.map((shift, index) => {
+        const tone = shiftTypeTone(shift.shiftType);
+        return (
+          <View
+            key={`${shift.assignmentId || shift.shiftId}-${shift.sequence}`}
+            style={[styles.shiftRow, index > 0 ? styles.shiftRowDivider : null]}>
+            <View style={styles.shiftRowMain}>
+              <View style={styles.shiftTitleRow}>
+                <Text style={styles.shiftName} numberOfLines={1}>
+                  {shift.name}
+                </Text>
+                {shift.code ? (
+                  <View style={styles.shiftCodeChip}>
+                    <Text style={styles.shiftCodeText}>{shift.code}</Text>
+                  </View>
+                ) : null}
+                {shifts.length > 1 ? (
+                  <View style={styles.sequenceChip}>
+                    <Text style={styles.sequenceChipText}>#{shift.sequence}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.shiftMetaRow}>
+                <MaterialIcons name="schedule" size={14} color={Colors.secondary} />
+                <Text style={styles.shiftWindow}>{shift.windowLabel}</Text>
+                <View style={[styles.typeBadge, { backgroundColor: tone.bg }]}>
+                  <Text style={[styles.typeBadgeText, { color: tone.text }]}>
+                    {shiftTypeLabel(shift.shiftType)}
+                  </Text>
+                </View>
+              </View>
+              {shift.note ? <Text style={styles.shiftNote}>{shift.note}</Text> : null}
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -255,11 +424,15 @@ function ClockActionButton({
   isClockedIn,
   isCompleted,
   isLoading,
+  disabled = false,
+  disabledHint = 'Unavailable',
   onPress,
 }: {
   isClockedIn: boolean;
   isCompleted: boolean;
   isLoading: boolean;
+  disabled?: boolean;
+  disabledHint?: string;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -293,35 +466,49 @@ function ClockActionButton({
     opacity: pulseOpacity.value,
   }));
 
-  const colors: [string, string] = isCompleted
-    ? [Colors.clockDoneStart, Colors.clockDoneEnd]
-    : isClockedIn
-      ? [Colors.clockOutStart, Colors.clockOutEnd]
-      : [Colors.primary, Colors.secondary];
+  const colors: [string, string] = disabled
+    ? ['#94A3B8', '#64748B']
+    : isCompleted
+      ? [Colors.clockDoneStart, Colors.clockDoneEnd]
+      : isClockedIn
+        ? [Colors.clockOutStart, Colors.clockOutEnd]
+        : [Colors.clockInStart, Colors.clockInEnd];
 
-  const ringColor = isClockedIn ? Colors.clockOutStart : Colors.secondary;
-  const actionLabel = isCompleted ? 'Completed' : isClockedIn ? 'Clock out' : 'Clock in';
-  const actionHint = isCompleted
-    ? 'See you tomorrow'
-    : isClockedIn
-      ? 'End your shift'
-      : 'Start your shift';
+  const ringColor = isClockedIn ? Colors.clockOutStart : Colors.pulse;
+  const actionLabel = disabled
+    ? disabledHint
+    : isCompleted
+      ? 'Completed'
+      : isClockedIn
+        ? 'Clock out'
+        : 'Clock in';
+  const actionHint = disabled
+    ? 'Contact HR for attendance'
+    : isCompleted
+      ? 'See you tomorrow'
+      : isClockedIn
+        ? 'End your shift'
+        : 'Start your shift';
 
   return (
     <View style={styles.clockButtonWrap}>
-      {!isCompleted ? (
+      {!isCompleted && !disabled ? (
         <Animated.View style={[styles.pulseRing, { backgroundColor: ringColor }, ringStyle]} />
       ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={actionLabel}
+        disabled={disabled || isLoading}
         onPressIn={() => {
+          if (disabled) return;
           scale.value = withSpring(0.94);
         }}
         onPressOut={() => {
+          if (disabled) return;
           scale.value = withSpring(1);
         }}
         onPress={() => {
+          if (disabled) return;
           try {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           } catch {
@@ -336,7 +523,7 @@ function ClockActionButton({
             ) : (
               <>
                 <MaterialIcons
-                  name={isCompleted ? 'check' : isClockedIn ? 'logout' : 'fingerprint'}
+                  name={disabled ? 'block' : isCompleted ? 'check' : isClockedIn ? 'logout' : 'fingerprint'}
                   size={52}
                   color="#fff"
                 />
@@ -377,7 +564,7 @@ const styles = StyleSheet.create({
   },
   roleLine: {
     marginTop: 4,
-    color: 'rgba(139,175,199,0.95)',
+    color: Colors.roleLine,
     fontSize: 13,
     fontFamily: Fonts.regular,
   },
@@ -435,7 +622,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.muted,
+    backgroundColor: Colors.secondaryLight,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -445,6 +632,144 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 12,
     fontFamily: Fonts.semibold,
+    color: Colors.mutedForeground,
+  },
+  assignedShiftCard: {
+    marginTop: 16,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  assignedShiftHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: Colors.secondaryLight,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  assignedShiftIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignedShiftHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  assignedShiftTitle: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.foreground,
+  },
+  assignedShiftSubtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.mutedForeground,
+  },
+  sourceBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  sourceBadgeRoster: {
+    backgroundColor: Colors.card,
+  },
+  sourceBadgeDefault: {
+    backgroundColor: 'rgba(255,255,255,0.65)',
+  },
+  sourceBadgeText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  sourceBadgeTextRoster: {
+    color: Colors.primaryDeep,
+  },
+  sourceBadgeTextDefault: {
+    color: Colors.mutedForeground,
+  },
+  shiftRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  shiftRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  shiftRowMain: {
+    gap: 6,
+  },
+  shiftTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  shiftName: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontFamily: Fonts.bold,
+    color: Colors.foreground,
+  },
+  shiftCodeChip: {
+    borderRadius: 999,
+    backgroundColor: Colors.primaryDeep,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  shiftCodeText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.primaryForeground,
+    letterSpacing: 0.3,
+  },
+  sequenceChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.muted,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  sequenceChipText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+    color: Colors.mutedForeground,
+  },
+  shiftMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  shiftWindow: {
+    fontSize: 13,
+    fontFamily: Fonts.semibold,
+    color: Colors.foreground,
+    fontVariant: ['tabular-nums'],
+  },
+  typeBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontFamily: Fonts.bold,
+  },
+  shiftNote: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
     color: Colors.mutedForeground,
   },
   ctaSection: {
@@ -483,7 +808,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: Colors.muted,
+    backgroundColor: Colors.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -519,7 +844,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDeep,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -571,7 +896,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.secondary,
     borderRadius: 999,
     paddingLeft: 12,
     paddingRight: 6,
@@ -601,8 +926,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 10,
-    shadowColor: Colors.primary,
-    shadowOpacity: 0.3,
+    shadowColor: Colors.primaryDeep,
+    shadowOpacity: 0.35,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
   },

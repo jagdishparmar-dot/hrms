@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { FormSelect } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import {
   deleteShiftAssignmentAction,
   generateRotationalRosterAction,
+  importShiftRosterCsvAction,
   upsertShiftAssignmentAction,
 } from "@/lib/appwrite/phase1-actions";
 import type {
@@ -25,9 +29,7 @@ import type {
   WorkShift,
 } from "@/lib/appwrite/types";
 import { formatShiftWindowLabel } from "@/lib/attendance-shift";
-
-const selectClassName =
-  "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import { shiftRosterCsvTemplate } from "@/lib/shift-roster-import";
 
 export function ShiftRoster({
   assignments,
@@ -40,10 +42,20 @@ export function ShiftRoster({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeShifts = useMemo(
     () => shifts.filter((shift) => shift.status === "active"),
     [shifts],
   );
+  const templateSample = useMemo(() => {
+    const employeeCode =
+      employees.find((employee) => employee.employeeCode)?.employeeCode || "EMP0001";
+    return shiftRosterCsvTemplate({
+      employeeCode,
+      shiftCodes: activeShifts.map((shift) => shift.code),
+    });
+  }, [activeShifts, employees]);
 
   function saveAssignment(formData: FormData) {
     startTransition(async () => {
@@ -83,8 +95,157 @@ export function ShiftRoster({
     });
   }
 
+  function downloadTemplate() {
+    const blob = new Blob([templateSample], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "shift-roster-template.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function uploadCsv(formData: FormData) {
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      toast.error("Select a CSV file to upload.");
+      return;
+    }
+
+    startTransition(async () => {
+      setImportErrors([]);
+      const result = await importShiftRosterCsvAction(formData);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      if (!result.ok) {
+        if (result.errors?.length) {
+          setImportErrors(result.errors);
+        }
+        toast.error(result.error);
+        return;
+      }
+
+      if (result.errors.length > 0) {
+        setImportErrors(result.errors);
+      }
+
+      const parts = [
+        result.created ? `${result.created} created` : null,
+        result.updated ? `${result.updated} updated` : null,
+        result.cleared ? `${result.cleared} cleared` : null,
+        result.failed ? `${result.failed} skipped` : null,
+      ].filter(Boolean);
+
+      toast.success(
+        parts.length > 0
+          ? `Imported ${result.totalRows} row(s): ${parts.join(", ")}`
+          : "Roster CSV processed.",
+      );
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="grid gap-4 lg:grid-cols-12">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Shift roster views
+          </p>
+          <p className="text-sm font-medium">Assignments & import</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled>
+            Assignments
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/shifts/roster/monthly" />}
+          >
+            Monthly matrix
+          </Button>
+        </div>
+      </div>
+
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle className="text-sm">Import roster from CSV</CardTitle>
+          <CardDescription>
+            Bulk-assign shifts using employee code, shift code, and date. Existing
+            employee-date-sequence rows are updated; use{" "}
+            <code className="text-xs">OFF</code> as shift code to clear a slot.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-muted-foreground dark:border-slate-800 dark:bg-slate-900/40">
+            <p className="font-medium text-foreground">Template columns</p>
+            <p className="mt-1 font-mono">
+              employee_code, shift_code, date, sequence, note
+            </p>
+            {activeShifts.length > 0 ? (
+              <p className="mt-2">
+                Active shift codes:{" "}
+                {activeShifts.map((shift) => shift.code).join(" · ")}
+              </p>
+            ) : (
+              <p className="mt-2 text-amber-700 dark:text-amber-300">
+                Add active shifts in the shift catalog before importing.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Button type="button" variant="outline" size="sm" onClick={downloadTemplate}>
+              <Download className="size-4" />
+              Download template
+            </Button>
+
+            <form
+              className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-end"
+              action={uploadCsv}
+            >
+              <div className="grid flex-1 gap-1.5">
+                <Label htmlFor="rosterCsv">CSV file</Label>
+                <Input
+                  ref={fileInputRef}
+                  id="rosterCsv"
+                  name="file"
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  disabled={pending || activeShifts.length === 0}
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={pending || activeShifts.length === 0}
+              >
+                <Upload className="size-4" />
+                {pending ? "Importing…" : "Upload CSV"}
+              </Button>
+            </form>
+          </div>
+
+          {importErrors.length > 0 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                Import warnings
+              </p>
+              <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-amber-800 dark:text-amber-200">
+                {importErrors.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-12">
       <Card className="lg:col-span-5">
         <CardHeader>
           <CardTitle className="text-sm">Assign shift to a day</CardTitle>
@@ -95,25 +256,17 @@ export function ShiftRoster({
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 sm:grid-cols-2" action={saveAssignment}>
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="employeeId">Employee</Label>
-              <select
-                id="employeeId"
-                name="employeeId"
-                required
-                className={selectClassName}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name} ({employee.employeeCode || "—"})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              name="employeeId"
+              label="Employee"
+              required
+              placeholder="Select employee"
+              options={employees.map((employee) => ({
+                value: employee.id,
+                label: `${employee.name} (${employee.employeeCode || "—"})`,
+              }))}
+              className="sm:col-span-2"
+            />
             <div className="grid gap-1.5">
               <Label htmlFor="dateIso">Date</Label>
               <Input id="dateIso" name="dateIso" type="date" required />
@@ -122,19 +275,17 @@ export function ShiftRoster({
               <Label htmlFor="sequence">Sequence</Label>
               <Input id="sequence" name="sequence" type="number" min={1} max={10} defaultValue={1} />
             </div>
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="shiftId">Shift</Label>
-              <select id="shiftId" name="shiftId" required className={selectClassName} defaultValue="">
-                <option value="" disabled>
-                  Select shift
-                </option>
-                {activeShifts.map((shift) => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name} · {formatShiftWindowLabel(shift)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              name="shiftId"
+              label="Shift"
+              required
+              placeholder="Select shift"
+              options={activeShifts.map((shift) => ({
+                value: shift.id,
+                label: `${shift.name} · ${formatShiftWindowLabel(shift)}`,
+              }))}
+              className="sm:col-span-2"
+            />
             <div className="grid gap-1.5 sm:col-span-2">
               <Label htmlFor="note">Note</Label>
               <Input id="note" name="note" placeholder="Optional" />
@@ -158,25 +309,17 @@ export function ShiftRoster({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <form className="grid gap-3 sm:grid-cols-2" action={generateRoster}>
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="genEmployeeId">Employee</Label>
-              <select
-                id="genEmployeeId"
-                name="employeeId"
-                required
-                className={selectClassName}
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select employee
-                </option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              name="employeeId"
+              label="Employee"
+              required
+              placeholder="Select employee"
+              options={employees.map((employee) => ({
+                value: employee.id,
+                label: employee.name,
+              }))}
+              className="sm:col-span-2"
+            />
             <div className="grid gap-1.5">
               <Label htmlFor="startDate">Start date</Label>
               <Input id="startDate" name="startDate" type="date" required />
@@ -247,6 +390,7 @@ export function ShiftRoster({
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

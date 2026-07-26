@@ -47,7 +47,7 @@ function MaterialTabButton({
       onPress={onPress}
       onLongPress={onLongPress}
       android_ripple={{
-        color: 'rgba(46, 107, 230, 0.16)',
+        color: 'rgba(99, 102, 241, 0.16)',
         borderless: true,
         radius: 36,
       }}
@@ -69,7 +69,7 @@ export default function TabLayout() {
 
   const activeColor = Colors.secondary;
   const inactiveColor = Colors.mutedForeground;
-  const activeIndicator = 'rgba(46, 107, 230, 0.14)';
+  const activeIndicator = Colors.secondaryLight;
   const surface = Colors.card;
 
   const renderIcon = (
@@ -134,7 +134,7 @@ export default function TabLayout() {
           paddingBottom: bottomInset,
           ...Platform.select({
             ios: {
-              shadowColor: '#0A1628',
+              shadowColor: Colors.foreground,
               shadowOffset: { width: 0, height: -1 },
               shadowOpacity: 0.1,
               shadowRadius: 10,

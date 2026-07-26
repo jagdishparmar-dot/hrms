@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { logoutAction } from '@/lib/appwrite/actions';
+import { cn } from '@/lib/utils';
 import {
   Building2Icon,
   ChevronsUpDownIcon,
@@ -36,6 +37,7 @@ function initials(name: string, email: string) {
 export function NavUser({
   user,
   showPlatform = false,
+  accent = 'indigo',
 }: {
   user: {
     name: string;
@@ -44,9 +46,14 @@ export function NavUser({
     role?: string;
   };
   showPlatform?: boolean;
+  accent?: 'indigo' | 'rose';
 }) {
   const { isMobile } = useSidebar();
   const fallback = initials(user.name, user.email);
+  const ringClass =
+    accent === 'rose'
+      ? 'ring-rose-500/40'
+      : 'ring-indigo-500/40';
 
   return (
     <SidebarMenu>
@@ -54,23 +61,32 @@ export function NavUser({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
+              <SidebarMenuButton
+                size="lg"
+                className="rounded-xl aria-expanded:bg-sidebar-accent"
+              />
             }
           >
-            <Avatar>
+            <Avatar className={cn('size-8 ring-2', ringClass)}>
               {user.avatar ? (
                 <AvatarImage src={user.avatar} alt={user.name} />
               ) : null}
-              <AvatarFallback>{fallback}</AvatarFallback>
+              <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
+                {fallback}
+              </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name || 'User'}</span>
-              <span className="truncate text-xs">{user.email}</span>
+              <span className="truncate font-semibold text-sidebar-foreground">
+                {user.name || 'User'}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </span>
             </div>
-            <ChevronsUpDownIcon className="ml-auto size-4" />
+            <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-56"
+            className="w-56 rounded-xl border-border bg-popover"
             side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={4}
@@ -78,11 +94,11 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar>
+                  <Avatar className={cn('size-8 ring-2', ringClass)}>
                     {user.avatar ? (
                       <AvatarImage src={user.avatar} alt={user.name} />
                     ) : null}
-                    <AvatarFallback>{fallback}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{fallback}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.name || 'User'}</span>

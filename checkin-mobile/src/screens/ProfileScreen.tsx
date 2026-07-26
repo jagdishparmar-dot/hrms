@@ -369,21 +369,32 @@ export function ProfileScreen({
         <Section title="Preferences" subtitle="Notification toggles — wiring comes later.">
           <View style={styles.settingRow}>
             <Text style={styles.settingTitle}>Leave & holiday updates</Text>
-            <Switch value trackColor={{ false: Colors.muted, true: 'rgba(46,107,230,0.45)' }} disabled />
+            <Switch value trackColor={{ false: Colors.muted, true: Colors.secondaryMuted }} disabled />
           </View>
         </Section>
 
         <View style={styles.locationCard}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.locationTitle}>Office range verification</Text>
+            <Text style={styles.locationTitle}>
+              {profile.attendancePolicy === 'gps_logged'
+                ? 'Field / GPS logged'
+                : profile.attendancePolicy === 'manual'
+                  ? 'Manual attendance'
+                  : 'Office range verification'}
+            </Text>
             <Text style={styles.locationSubtitle}>
-              GPS: {profile.lastKnownDistanceMeters <= 1 ? '1 meter away' : `${profile.lastKnownDistanceMeters}m away`} ·{' '}
-              {profile.isWithinGeofence ? 'Within geofence' : 'Outside geofence'}
+              {profile.attendancePolicy === 'manual'
+                ? 'Self punch is disabled. Contact HR to mark attendance.'
+                : profile.attendancePolicy === 'gps_logged'
+                  ? 'You can punch from any location. GPS is recorded on each punch.'
+                  : `GPS: ${profile.lastKnownDistanceMeters <= 1 ? '1 meter away' : `${profile.lastKnownDistanceMeters}m away`} · ${profile.isWithinGeofence ? 'Within geofence' : 'Outside geofence'}`}
             </Text>
           </View>
-          <Pressable style={styles.changeButton} onPress={onOpenLocationSheet}>
-            <Text style={styles.changeButtonText}>Status</Text>
-          </Pressable>
+          {profile.attendancePolicy !== 'manual' ? (
+            <Pressable style={styles.changeButton} onPress={onOpenLocationSheet}>
+              <Text style={styles.changeButtonText}>Status</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {onLogout ? (

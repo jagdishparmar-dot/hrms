@@ -2,16 +2,24 @@
   "expo": {
     "name": "CheckIn",
     "slug": "checkin-mobile",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7ee0ed7a-82ef-49cb-b977-94ff5485fdac",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "icon": "./assets/images/icon.png",
     "scheme": "checkinmobile",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#0A2540",
+    "backgroundColor": "#312E81",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A2540"
+      "backgroundColor": "#312E81"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,7 +27,7 @@
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0A2540"
+        "backgroundColor": "#312E81"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "CheckIn uses your location to verify you are within the office geofence when clocking in."
@@ -28,7 +36,7 @@
     "android": {
       "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#0A2540",
+        "backgroundColor": "#312E81",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -36,10 +44,10 @@
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0A2540"
+        "backgroundColor": "#312E81"
       },
       "statusBar": {
-        "backgroundColor": "#1A3A6B",
+        "backgroundColor": "#3730A3",
         "barStyle": "light-content",
         "translucent": false
       },
@@ -51,7 +59,7 @@
       ],
       "predictiveBackGestureEnabled": false,
       "package": "com.ayersh009.checkinmobile",
-      "versionCode": 1
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
@@ -66,7 +74,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#0A2540"
+          "backgroundColor": "#312E81"
         }
       ],
       [
@@ -76,7 +84,8 @@
         }
       ],
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true

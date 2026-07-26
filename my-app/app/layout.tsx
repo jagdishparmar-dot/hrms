@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { rootMetadata } from "@/lib/site-metadata";
+import { parseThemeMode, THEME_STORAGE_KEY, type ThemeMode } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -19,19 +22,29 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = rootMetadata;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const theme: ThemeMode = parseThemeMode(cookieStore.get(THEME_STORAGE_KEY)?.value) ?? "dark";
+
   return (
     <html
       lang="en"
-      data-theme-preset="default"
-      className={cn("h-full antialiased", geistSans.variable, geistMono.variable)}
+      suppressHydrationWarning
+      data-theme={theme}
+      data-theme-preset="checkin"
+      className={cn(
+        "h-full antialiased",
+        theme === "dark" ? "dark" : "light",
+        geistSans.variable,
+        geistMono.variable,
+      )}
     >
-      <body className="flex min-h-full flex-col font-sans">
-        {children}
+      <body className="flex min-h-full flex-col bg-background font-sans text-foreground transition-colors duration-200">
+        <ThemeProvider defaultTheme={theme}>{children}</ThemeProvider>
         <Toaster />
       </body>
     </html>

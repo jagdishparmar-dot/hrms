@@ -29,3 +29,16 @@ export function previewNextEmployeeCode(settings: CompanySettings): string {
   const config = employeeCodeConfigFromSettings(settings);
   return formatEmployeeCode(config, config.nextSequence);
 }
+
+/** True when the server should allocate the next sequential code on create. */
+export function shouldAllocateEmployeeCode(
+  settings: CompanySettings,
+  submittedCode: string,
+): boolean {
+  const config = employeeCodeConfigFromSettings(settings);
+  if (!config.autoGenerate) return false;
+  const trimmed = submittedCode.trim();
+  if (!trimmed) return true;
+  // Treat stale preview values (pre-filled forms) as "request auto assign".
+  return trimmed === previewNextEmployeeCode(settings);
+}

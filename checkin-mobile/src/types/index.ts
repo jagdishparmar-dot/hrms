@@ -8,6 +8,8 @@ export type AttendanceStatus =
 
 export type EmploymentType = 'Permanent' | 'Contract' | 'Intern' | 'Consultant';
 
+export type AttendancePolicy = 'geofenced' | 'gps_logged' | 'manual';
+
 export type EmployeeDocumentCategory =
   | 'profile_picture'
   | 'identity'
@@ -59,6 +61,8 @@ export interface UserProfile {
   geofenceRadiusMeters: number;
   lastKnownDistanceMeters: number;
   isWithinGeofence: boolean;
+  /** geofenced = site boundary required; gps_logged = any location; manual = no self punch */
+  attendancePolicy: AttendancePolicy;
   mustChangePassword?: boolean;
   companyId?: string;
   workShiftStart: string;
@@ -95,9 +99,33 @@ export interface UserProfile {
   emergencyContactPhone: string;
 }
 
+export type TodayShiftSource = 'roster' | 'default';
+
+export interface TodayShiftInfo {
+  assignmentId?: string;
+  dateIso: string;
+  sequence: number;
+  shiftId: string;
+  name: string;
+  code: string;
+  shiftType: 'general' | 'evening' | 'night' | 'rotational' | 'cross_midnight';
+  startTime: string;
+  endTime: string;
+  windowLabel: string;
+  source: TodayShiftSource;
+  note?: string;
+}
+
+export interface TodayShiftSchedule {
+  dateIso: string;
+  timezone: string;
+  shifts: TodayShiftInfo[];
+}
+
 export interface MainUiState {
   userProfile: UserProfile;
   todayRecord: AttendanceRecord | null;
+  todayShiftSchedule: TodayShiftSchedule;
   allRecords: AttendanceRecord[];
   currentTimeFormatted: string;
   currentDateFormatted: string;

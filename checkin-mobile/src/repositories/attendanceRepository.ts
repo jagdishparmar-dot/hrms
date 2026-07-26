@@ -2,9 +2,17 @@ import type { Models } from 'react-native-appwrite';
 
 import { AppwriteConfig } from '@/src/config/appwrite';
 import { databases, Query } from '@/src/lib/appwrite';
-import { authHeaders } from '@/src/services/apiClient';
+import { authHeaders, warmAuthHeaders } from '@/src/services/apiClient';
+import type { CachedPunchLocation } from '@/src/services/locationService';
 import { profileRepository } from '@/src/repositories/profileRepository';
-import type { AttendanceRecord, AttendanceStatus, RegularizationRequest, UserProfile } from '@/src/types';
+import type {
+  AttendancePolicy,
+  AttendanceRecord,
+  AttendanceStatus,
+  LocationResult,
+  RegularizationRequest,
+  UserProfile,
+} from '@/src/types';
 import { formatDuration } from '@/src/utils/dateTime';
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
@@ -20,6 +28,7 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   geofenceRadiusMeters: 500,
   lastKnownDistanceMeters: 1,
   isWithinGeofence: true,
+  attendancePolicy: 'geofenced',
   workShiftStart: '09:00',
   workShiftEnd: '18:00',
   phone: '',
@@ -86,6 +95,7 @@ type EmployeeDoc = Models.Document & {
   bloodGroup?: string | null;
   grade?: string | null;
   mustChangePassword?: boolean | null;
+  attendancePolicy?: string | null;
 };
 
 type AttendanceDoc = Models.Document & {
@@ -167,9 +177,20 @@ export class AttendanceRepository {
   private currentUserId: string | null = null;
   private cachedProfile: UserProfile | null = null;
   private companyId: string | null = null;
-  private locationState = {
+  private locationState: {
+    latitude: number | null;
+    longitude: number | null;
+    accuracy: number | null;
+    lastKnownDistanceMeters: number;
+    isWithinGeofence: boolean;
+    updatedAt: number | null;
+  } = {
+    latitude: null,
+    longitude: null,
+    accuracy: null,
     lastKnownDistanceMeters: 1,
     isWithinGeofence: true,
+    updatedAt: null,
   };
 
   setUserId(userId: string | null) {
@@ -252,6 +273,11 @@ export class AttendanceRepository {
       }
     }
 
+    const attendancePolicy: AttendancePolicy =
+      doc.attendancePolicy === 'gps_logged' || doc.attendancePolicy === 'manual'
+        ? doc.attendancePolicy
+        : 'geofenced';
+
     const geofence = {
       officeLocation,
       officeLatitude,
@@ -259,6 +285,7 @@ export class AttendanceRepository {
       geofenceRadiusMeters,
       lastKnownDistanceMeters: this.locationState.lastKnownDistanceMeters,
       isWithinGeofence: this.locationState.isWithinGeofence,
+      attendancePolicy,
     };
 
     try {
@@ -307,13 +334,40 @@ export class AttendanceRepository {
     }
   }
 
-  async updateLocationStatus(distanceMeters: number, isWithinGeofence: boolean) {
-    this.locationState = { lastKnownDistanceMeters: distanceMeters, isWithinGeofence };
+  getLocationCache(): CachedPunchLocation | null {
+    const { latitude, longitude, updatedAt } = this.locationState;
+    if (latitude == null || longitude == null || updatedAt == null) {
+      return null;
+    }
+
+    return {
+      latitude,
+      longitude,
+      accuracy: this.locationState.accuracy,
+      distanceMeters: this.locationState.lastKnownDistanceMeters,
+      isWithinGeofence: this.locationState.isWithinGeofence,
+      updatedAt,
+    };
+  }
+
+  async warmPunchAuth() {
+    await warmAuthHeaders(this.companyId);
+  }
+
+  async updateLocationStatus(location: LocationResult) {
+    this.locationState = {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy,
+      lastKnownDistanceMeters: location.distanceMeters,
+      isWithinGeofence: location.isWithinGeofence,
+      updatedAt: Date.now(),
+    };
     if (this.cachedProfile) {
       this.cachedProfile = {
         ...this.cachedProfile,
-        lastKnownDistanceMeters: distanceMeters,
-        isWithinGeofence,
+        lastKnownDistanceMeters: location.distanceMeters,
+        isWithinGeofence: location.isWithinGeofence,
       };
       return this.cachedProfile;
     }

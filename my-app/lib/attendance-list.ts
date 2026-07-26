@@ -1,6 +1,7 @@
 import type { AttendanceRecord } from "@/lib/appwrite/types";
 
 export const ATTENDANCE_PAGE_SIZE = 25;
+export const ATTENDANCE_PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 export const ATTENDANCE_EXPORT_MAX = 5000;
 
 export function todayIsoDate() {

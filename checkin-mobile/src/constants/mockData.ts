@@ -67,7 +67,7 @@ export const SAMPLE_DOCUMENTS: DocumentResource[] = [
 ];
 
 export const LEAVE_BALANCES = [
-  { title: 'Casual Leave', remaining: '8 / 12', icon: 'beach-access' as const, color: '#3498DB' },
+  { title: 'Casual Leave', remaining: '8 / 12', icon: 'beach-access' as const, color: '#6366F1' },
   { title: 'Sick Leave', remaining: '6 / 7', icon: 'medical-services' as const, color: '#E74C3C' },
   { title: 'Earned Leave', remaining: '10 / 15', icon: 'folder-shared' as const, color: '#F5A623' },
 ];

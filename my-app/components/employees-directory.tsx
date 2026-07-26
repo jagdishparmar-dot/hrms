@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
   Building2,
+  Contact,
+  Mail,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -51,18 +53,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { Input } from "@/components/ui/input";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
+  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -85,7 +92,10 @@ import { cn, getInitials } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "active", "inactive", "invited"] as const;
 const TYPE_FILTERS = ["All", "Permanent", "3PL", "Intern", "Consultant"] as const;
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+type TypeFilter = (typeof TYPE_FILTERS)[number];
 
 function statusBadgeClass(status: EmployeeMembership["status"]) {
   if (status === "active") {
@@ -107,7 +117,39 @@ function typeBadgeClass(type: string) {
   if (type === "Consultant") {
     return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300";
   }
-  return "border-border bg-muted/50 text-foreground";
+  return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300";
+}
+
+function getVisiblePages(
+  current: number,
+  total: number,
+): Array<number | "ellipsis"> {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+
+  const pages: Array<number | "ellipsis"> = [1];
+
+  if (current > 3) {
+    pages.push("ellipsis");
+  }
+
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (current < total - 2) {
+    pages.push("ellipsis");
+  }
+
+  if (total > 1) {
+    pages.push(total);
+  }
+
+  return pages;
 }
 
 function StatCard({
@@ -115,30 +157,70 @@ function StatCard({
   value,
   hint,
   icon: Icon,
-  colorClass = "bg-primary/10 text-primary",
+  tone = "blue",
+  active = false,
+  onClick,
 }: {
   label: string;
   value: number | string;
   hint: string;
   icon: ComponentType<{ className?: string }>;
-  colorClass?: string;
+  tone?: "blue" | "emerald" | "amber" | "indigo";
+  active?: boolean;
+  onClick?: () => void;
 }) {
-  return (
-    <Card className="h-full shadow-xs">
-      <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-        <div className={cn("flex size-12 shrink-0 items-center justify-center rounded-2xl", colorClass)}>
-          <Icon className="size-5" />
+  const toneClass = {
+    blue: "border-blue-200/80 bg-blue-50 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400",
+    emerald:
+      "border-emerald-200/80 bg-emerald-50 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400",
+    amber:
+      "border-amber-200/80 bg-amber-50 text-amber-600 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400",
+    indigo:
+      "border-indigo-200/80 bg-indigo-50 text-indigo-600 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-400",
+  }[tone];
+
+  const card = (
+    <Card
+      size="sm"
+      className={cn(
+        "shadow-xs transition-colors",
+        onClick && "cursor-pointer hover:bg-accent/20",
+        active && "ring-2 ring-primary/40",
+      )}
+    >
+      <CardContent className="flex items-center gap-3 py-3">
+        <div
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-lg border",
+            toneClass,
+          )}
+        >
+          <Icon className="size-3.5" />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <div className="flex items-baseline gap-2 mt-0.5">
-            <p className="text-2xl font-bold tracking-tight tabular-nums">{value}</p>
-            <p className="text-xs text-muted-foreground truncate">{hint}</p>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <p className="text-xl font-bold tabular-nums leading-tight">{value}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{hint}</p>
         </div>
       </CardContent>
     </Card>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="block h-full w-full rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        {card}
+      </button>
+    );
+  }
+
+  return card;
 }
 
 type BreakdownRow = { label: string; count: number };
@@ -180,7 +262,7 @@ function buildActiveBreakdown(
     rows.push({ label: "Unassigned", count: unassigned });
   }
 
-  return rows;
+  return rows.filter((row) => row.count > 0);
 }
 
 function BreakdownWidget({
@@ -200,34 +282,34 @@ function BreakdownWidget({
   const maxCount = Math.max(...rows.map((row) => row.count), 1);
 
   return (
-    <Card className={cn("flex flex-col shadow-xs", className)}>
-      <CardHeader className="p-4 pb-0 border-b">
-        <div className="flex items-center gap-2 pb-3">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Icon className="size-3.5" />
-          </div>
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <span className="ml-auto text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-            {total} active
-          </span>
+    <Card size="sm" className={cn("flex h-full flex-col shadow-xs", className)}>
+      <CardHeader className="flex-row items-center gap-2 space-y-0 border-b px-3 py-2.5">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+          <Icon className="size-3.5" />
         </div>
+        <CardTitle className="min-w-0 flex-1 truncate text-sm">{title}</CardTitle>
+        <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] tabular-nums">
+          {total}
+        </Badge>
       </CardHeader>
-      <CardContent className="p-4 pt-4 flex-1">
+      <CardContent className="px-3 py-2.5">
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+          <p className="text-xs text-muted-foreground">{emptyMessage}</p>
         ) : (
-          <ul className="max-h-[220px] space-y-3 overflow-y-auto pr-1">
+          <ul className="max-h-28 space-y-2 overflow-y-auto pr-0.5">
             {rows.map((row) => (
-              <li key={row.label} className="group flex items-center justify-between gap-3 text-sm">
-                <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors">{row.label}</span>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="hidden sm:block w-24 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary/40 group-hover:bg-primary/70 transition-all"
-                      style={{ width: `${(row.count / maxCount) * 100}%` }}
-                    />
-                  </div>
-                  <span className="tabular-nums font-medium w-6 text-right">{row.count}</span>
+              <li key={row.label} className="space-y-1">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate font-medium">{row.label}</span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {row.count}
+                  </span>
+                </div>
+                <div className="h-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-indigo-500/70 dark:bg-indigo-400/80"
+                    style={{ width: `${(row.count / maxCount) * 100}%` }}
+                  />
                 </div>
               </li>
             ))}
@@ -256,18 +338,66 @@ export function EmployeesDirectory({
   maxEmployees?: number;
 }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<(typeof STATUS_FILTERS)[number]>("All");
-  const [typeFilter, setTypeFilter] =
-    useState<(typeof TYPE_FILTERS)[number]>("All");
-  const [page, setPage] = useState(1);
+  const searchParams = useSearchParams();
+  const listRef = useRef<HTMLDivElement>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [editEmployee, setEditEmployee] = useState<EmployeeMembership | null>(null);
+  const [editEmployee, setEditEmployee] = useState<EmployeeMembership | null>(
+    null,
+  );
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMembership | null>(
     null,
   );
   const [pending, startTransition] = useTransition();
+
+  const search = searchParams.get("q") ?? "";
+  const statusFilter = (STATUS_FILTERS.includes(
+    (searchParams.get("status") ?? "All") as StatusFilter,
+  )
+    ? (searchParams.get("status") ?? "All")
+    : "All") as StatusFilter;
+  const typeFilter = (TYPE_FILTERS.includes(
+    (searchParams.get("type") ?? "All") as TypeFilter,
+  )
+    ? (searchParams.get("type") ?? "All")
+    : "All") as TypeFilter;
+  const pageSize = PAGE_SIZE_OPTIONS.includes(
+    Number(searchParams.get("size")) as (typeof PAGE_SIZE_OPTIONS)[number],
+  )
+    ? Number(searchParams.get("size"))
+    : 20;
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+
+  function updateQuery(
+    updates: Record<string, string | number | null | undefined>,
+    options?: { scrollToList?: boolean },
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (
+        value == null ||
+        value === "" ||
+        value === "All" ||
+        (key === "page" && Number(value) <= 1) ||
+        (key === "size" && Number(value) === 20)
+      ) {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    }
+
+    const query = params.toString();
+    router.replace(query ? `/employees?${query}` : "/employees", {
+      scroll: false,
+    });
+
+    if (options?.scrollToList) {
+      requestAnimationFrame(() => {
+        listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
 
   const stats = useMemo(() => {
     const active = employees.filter((e) => e.status === "active").length;
@@ -282,21 +412,24 @@ export function EmployeesDirectory({
 
   const departmentBreakdown = useMemo(
     () =>
-      buildActiveBreakdown(
-        employees,
-        "department",
-        orgConfig.departments,
-      ),
+      buildActiveBreakdown(employees, "department", orgConfig.departments),
     [employees, orgConfig.departments],
+  );
+
+  const designationBreakdown = useMemo(
+    () =>
+      buildActiveBreakdown(employees, "designation", orgConfig.designations),
+    [employees, orgConfig.designations],
   );
 
   const employmentTypeBreakdown = useMemo(() => {
     const active = employees.filter((employee) => employee.status === "active");
     const counts = new Map<string, number>();
-    
-    // Initialize common types so they appear even if 0
     const commonTypes = ["Permanent", "3PL", "Intern", "Consultant"];
-    for (const t of commonTypes) counts.set(t, 0);
+
+    for (const type of commonTypes) {
+      counts.set(type, 0);
+    }
 
     for (const employee of active) {
       const type = employee.employmentType || "Permanent";
@@ -305,14 +438,19 @@ export function EmployeesDirectory({
 
     return Array.from(counts.entries())
       .map(([label, count]) => ({ label, count }))
+      .filter((row) => row.count > 0)
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [employees]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return employees.filter((employee) => {
-      if (statusFilter !== "All" && employee.status !== statusFilter) return false;
-      if (typeFilter !== "All" && employee.employmentType !== typeFilter) return false;
+      if (statusFilter !== "All" && employee.status !== statusFilter) {
+        return false;
+      }
+      if (typeFilter !== "All" && employee.employmentType !== typeFilter) {
+        return false;
+      }
       if (!q) return true;
       return (
         employee.name.toLowerCase().includes(q) ||
@@ -324,19 +462,22 @@ export function EmployeesDirectory({
     });
   }, [employees, search, statusFilter, typeFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageRows = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+  const visiblePages = getVisiblePages(currentPage, totalPages);
 
   const hasActiveFilters =
     search.trim().length > 0 || statusFilter !== "All" || typeFilter !== "All";
 
   function clearFilters() {
-    setSearch("");
-    setStatusFilter("All");
-    setTypeFilter("All");
-    setPage(1);
+    updateQuery({
+      q: null,
+      status: null,
+      type: null,
+      page: null,
+    });
   }
 
   function runAction(
@@ -360,111 +501,140 @@ export function EmployeesDirectory({
 
   const seatLabel =
     maxEmployees != null
-      ? `${employees.length} / ${maxEmployees} seats`
-      : `${employees.length} total`;
+      ? `${employees.length} / ${maxEmployees} seats used`
+      : `${employees.length} on roster`;
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* Left Col: KPIs stacked over Employment Type */}
-        <div className="flex flex-col gap-4 lg:col-span-8">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              label="Workforce"
-              value={employees.length}
-              hint={seatLabel}
-              icon={Users}
-              colorClass="bg-blue-100/50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400"
-            />
-            <StatCard
-              label="Active"
-              value={stats.active}
-              hint="Can sign in and use apps"
-              icon={UserCheck}
-              colorClass="bg-emerald-100/50 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400"
-            />
-            <StatCard
-              label="Inactive / invited"
-              value={stats.inactive + stats.invited}
-              hint={`${stats.inactive} inactive · ${stats.invited} invited`}
-              icon={UserX}
-              colorClass="bg-amber-100/50 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400"
-            />
-            <StatCard
-              label="Organization"
-              value={stats.departments}
-              hint={`${stats.threePl} on 3PL · ${orgConfig.departments.length} depts`}
-              icon={Building2}
-              colorClass="bg-purple-100/50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400"
-            />
-          </div>
+      <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="Workforce"
+            value={employees.length}
+            hint={seatLabel}
+            icon={Users}
+            tone="blue"
+            onClick={() => {
+              clearFilters();
+              updateQuery({}, { scrollToList: true });
+            }}
+            active={!hasActiveFilters}
+          />
+          <StatCard
+            label="Active"
+            value={stats.active}
+            hint="Enabled accounts"
+            icon={UserCheck}
+            tone="emerald"
+            active={statusFilter === "active"}
+            onClick={() => {
+              updateQuery(
+                {
+                  status: statusFilter === "active" ? null : "active",
+                  page: null,
+                },
+                { scrollToList: true },
+              );
+            }}
+          />
+          <StatCard
+            label="Pending"
+            value={stats.inactive + stats.invited}
+            hint={`${stats.inactive} inactive · ${stats.invited} invited`}
+            icon={UserX}
+            tone="amber"
+            active={statusFilter === "inactive" || statusFilter === "invited"}
+            onClick={() => {
+              updateQuery(
+                {
+                  status:
+                    statusFilter === "inactive" ? "invited" : "inactive",
+                  page: null,
+                },
+                { scrollToList: true },
+              );
+            }}
+          />
+          <StatCard
+            label="Departments"
+            value={stats.departments}
+            hint={`${stats.threePl} on 3PL`}
+            icon={Building2}
+            tone="indigo"
+          />
+        </div>
 
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <BreakdownWidget
             title="By employment type"
             icon={Briefcase}
             rows={employmentTypeBreakdown}
-            emptyMessage="No active employees yet."
-            className="flex-1"
+            emptyMessage="No active employees."
           />
-        </div>
-
-        {/* Right Col: Department Breakdown */}
-        <div className="lg:col-span-4 h-full">
           <BreakdownWidget
             title="By department"
             icon={Building2}
             rows={departmentBreakdown}
-            emptyMessage="No active employees or departments configured yet."
-            className="h-full"
+            emptyMessage="No active employees."
+          />
+          <BreakdownWidget
+            title="By designation"
+            icon={Contact}
+            rows={designationBreakdown}
+            emptyMessage="No active employees."
           />
         </div>
       </div>
 
-      <Card className="overflow-hidden shadow-xs mt-2">
-        <CardHeader className="gap-4 border-b bg-muted/20 pb-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div ref={listRef} className="scroll-mt-24">
+      <Card className="overflow-hidden shadow-xs">
+        <CardHeader className="gap-4 border-b bg-muted/15 pb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
               <CardTitle className="text-xl">People directory</CardTitle>
               <CardDescription>
-                Search, filter, and manage employee profiles and access.
+                Search, filter, and open profiles. {filtered.length} result
+                {filtered.length === 1 ? "" : "s"}
+                {hasActiveFilters ? ` of ${employees.length}` : ""}.
               </CardDescription>
             </div>
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-              <InputGroup className="h-10 w-full sm:w-72 bg-muted/30">
-                <InputGroupAddon align="inline-start">
-                  <Search className="size-4 text-muted-foreground" />
-                </InputGroupAddon>
-                <InputGroupInput
-                  className="h-10 border-none bg-transparent focus-visible:ring-0"
-                  placeholder="Search name, email, code, dept…"
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 pl-9"
+                  placeholder="Search name, email, code…"
                   value={search}
                   onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
+                    updateQuery({
+                      q: event.target.value || null,
+                      page: null,
+                    });
                   }}
                 />
-              </InputGroup>
-              <Button className="h-10 shrink-0 shadow-xs" onClick={() => setCreateOpen(true)}>
+              </div>
+              <Button
+                className="h-10 shrink-0 shadow-xs"
+                onClick={() => setCreateOpen(true)}
+              >
                 <UserPlus className="size-4" />
                 Add employee
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/40 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <FilterPills
                 label="Status"
                 value={statusFilter}
                 options={STATUS_FILTERS}
-                counts={employees.reduce<Record<string, number>>((acc, e) => {
-                  acc[e.status] = (acc[e.status] || 0) + 1;
+                counts={employees.reduce<Record<string, number>>((acc, employee) => {
+                  acc[employee.status] = (acc[employee.status] || 0) + 1;
                   return acc;
                 }, {})}
                 onChange={(value) => {
-                  setStatusFilter(value);
-                  setPage(1);
+                  updateQuery({ status: value === "All" ? null : value, page: null });
                 }}
               />
               <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
@@ -472,14 +642,13 @@ export function EmployeesDirectory({
                 label="Type"
                 value={typeFilter}
                 options={TYPE_FILTERS}
-                counts={employees.reduce<Record<string, number>>((acc, e) => {
-                  const key = e.employmentType || "Unknown";
+                counts={employees.reduce<Record<string, number>>((acc, employee) => {
+                  const key = employee.employmentType || "Permanent";
                   acc[key] = (acc[key] || 0) + 1;
                   return acc;
                 }, {})}
                 onChange={(value) => {
-                  setTypeFilter(value);
-                  setPage(1);
+                  updateQuery({ type: value === "All" ? null : value, page: null });
                 }}
               />
               {hasActiveFilters ? (
@@ -487,77 +656,70 @@ export function EmployeesDirectory({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 gap-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-8 gap-1 text-muted-foreground"
                   onClick={clearFilters}
                 >
-                  <X className="size-3" />
-                  Clear filters
+                  <X className="size-3.5" />
+                  Clear
                 </Button>
               ) : null}
             </div>
-            <p className="px-2 text-xs font-medium tabular-nums text-muted-foreground">
-              {filtered.length === employees.length
-                ? `${filtered.length} employees`
-                : `${filtered.length} of ${employees.length} shown`}
-            </p>
           </div>
         </CardHeader>
 
         <CardContent className="p-0">
           {pageRows.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto [&_[data-slot=table-container]]:rounded-none [&_[data-slot=table-container]]:border-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b bg-muted/40 text-muted-foreground hover:bg-muted/40">
-                      <TableHead className="pl-6 h-10 font-medium">Employee</TableHead>
-                      <TableHead className="h-10 font-medium">Code</TableHead>
-                      <TableHead className="h-10 font-medium">Role & Type</TableHead>
-                      <TableHead className="h-10 font-medium">Department</TableHead>
-                      <TableHead className="h-10 font-medium">Status</TableHead>
-                      <TableHead className="pr-6 text-right h-10 font-medium">Actions</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="pl-6">Employee</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Role & type</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="pr-6 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pageRows.map((employee) => (
-                      <TableRow
-                        key={employee.id}
-                        className="group transition-colors hover:bg-muted/20"
-                      >
-                        <TableCell className="pl-6 py-3">
+                      <TableRow key={employee.id} className="group">
+                        <TableCell className="pl-6 py-3.5">
                           <div className="flex items-center gap-3">
-                            <Avatar size="default" className="ring-1 ring-border/60">
-                              <AvatarFallback className="bg-primary/5 font-medium text-primary">
+                            <Avatar className="size-10 ring-1 ring-border/60">
+                              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
                                 {getInitials(employee.name)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
                               <Link
                                 href={`/employees/${employee.id}`}
-                                className="block truncate font-medium transition-colors hover:text-primary"
+                                className="block truncate font-semibold transition-colors hover:text-primary"
                               >
                                 {employee.name}
                               </Link>
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                <span className="truncate">{employee.email}</span>
-                              </div>
+                              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                                <Mail className="size-3 shrink-0" />
+                                {employee.email}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-3">
-                          <span className="font-mono text-xs text-muted-foreground">
+                        <TableCell>
+                          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                             {employee.employeeCode || "—"}
-                          </span>
+                          </code>
                         </TableCell>
-                        <TableCell className="py-3">
-                          <div className="flex flex-col items-start gap-1">
-                            <p className="truncate text-sm font-medium text-foreground">
+                        <TableCell>
+                          <div className="flex flex-col items-start gap-1.5">
+                            <span className="truncate text-sm font-medium">
                               {employee.designation || "—"}
-                            </p>
+                            </span>
                             <Badge
                               variant="outline"
                               className={cn(
-                                "w-fit text-[10px] font-medium leading-none px-1.5 py-0.5",
+                                "text-[10px] font-medium",
                                 typeBadgeClass(employee.employmentType || "Permanent"),
                               )}
                             >
@@ -565,14 +727,12 @@ export function EmployeesDirectory({
                             </Badge>
                           </div>
                         </TableCell>
-                        <TableCell className="py-3">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {employee.department || (
-                              <span>Unassigned</span>
-                            )}
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {employee.department || "Unassigned"}
                           </span>
                         </TableCell>
-                        <TableCell className="py-3">
+                        <TableCell>
                           <Badge
                             variant="outline"
                             className={cn(
@@ -662,50 +822,100 @@ export function EmployeesDirectory({
                 </Table>
               </div>
 
-              {totalPages > 1 ? (
-                <div className="flex flex-col items-center justify-between gap-3 border-t px-6 py-4 sm:flex-row">
+              <div className="flex flex-col gap-4 border-t bg-muted/10 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {pageStart + 1}–
-                    {Math.min(pageStart + PAGE_SIZE, filtered.length)} of{" "}
-                    {filtered.length}
+                    Showing{" "}
+                    <span className="font-medium text-foreground">
+                      {pageStart + 1}–
+                      {Math.min(pageStart + pageSize, filtered.length)}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium text-foreground">
+                      {filtered.length}
+                    </span>
                   </p>
-                  <Pagination className="mx-0 w-auto">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            setPage((p) => Math.max(1, p - 1));
-                          }}
-                          className={
-                            currentPage <= 1 ? "pointer-events-none opacity-50" : ""
-                          }
-                        />
-                      </PaginationItem>
-                      <PaginationItem>
-                        <span className="px-2 text-sm tabular-nums text-muted-foreground">
-                          Page {currentPage} of {totalPages}
-                        </span>
-                      </PaginationItem>
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            setPage((p) => Math.min(totalPages, p + 1));
-                          }}
-                          className={
-                            currentPage >= totalPages
-                              ? "pointer-events-none opacity-50"
-                              : ""
-                          }
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Rows</span>
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(value) => {
+                        if (!value) return;
+                        updateQuery({
+                          size: Number(value) === 20 ? null : Number(value),
+                          page: null,
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-[4.5rem]" size="sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent align="start">
+                        {PAGE_SIZE_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={String(option)}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              ) : null}
+
+                <Pagination className="mx-0 w-auto justify-start lg:justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (currentPage <= 1) return;
+                          updateQuery({ page: currentPage - 1 });
+                        }}
+                        className={
+                          currentPage <= 1 ? "pointer-events-none opacity-50" : ""
+                        }
+                      />
+                    </PaginationItem>
+
+                    {visiblePages.map((pageNumber, index) =>
+                      pageNumber === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={pageNumber}>
+                          <PaginationLink
+                            href="#"
+                            isActive={pageNumber === currentPage}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              updateQuery({ page: pageNumber });
+                            }}
+                          >
+                            {pageNumber}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (currentPage >= totalPages) return;
+                          updateQuery({ page: currentPage + 1 });
+                        }}
+                        className={
+                          currentPage >= totalPages
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             </>
           ) : (
             <EmptyState
@@ -716,6 +926,7 @@ export function EmployeesDirectory({
           )}
         </CardContent>
       </Card>
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
@@ -850,10 +1061,14 @@ function FilterPills<T extends string>({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-0.5 text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="mr-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
       {options.map((option) => {
         const count =
-          option === "All" ? Object.values(counts).reduce((a, b) => a + b, 0) : counts[option] ?? 0;
+          option === "All"
+            ? Object.values(counts).reduce((a, b) => a + b, 0)
+            : (counts[option] ?? 0);
         const active = value === option;
         return (
           <Button
@@ -863,7 +1078,7 @@ function FilterPills<T extends string>({
             variant={active ? "secondary" : "ghost"}
             className={cn(
               "h-8 gap-1.5 rounded-full px-3 capitalize",
-              active && "ring-1 ring-border",
+              active && "bg-white shadow-xs ring-1 ring-border dark:bg-slate-800",
             )}
             onClick={() => onChange(option)}
           >
@@ -871,7 +1086,7 @@ function FilterPills<T extends string>({
             <span
               className={cn(
                 "rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
-                active ? "bg-background/80" : "bg-muted",
+                active ? "bg-muted" : "bg-muted/60",
               )}
             >
               {count}
@@ -894,14 +1109,14 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground">
+      <div className="flex size-14 items-center justify-center rounded-2xl border border-dashed bg-muted/40 text-muted-foreground">
         {hasFilters ? (
           <Search className="size-6" />
         ) : (
           <Briefcase className="size-6" />
         )}
       </div>
-      <h3 className="mt-4 text-base font-medium">
+      <h3 className="mt-4 text-base font-semibold">
         {hasFilters ? "No matches found" : "No employees yet"}
       </h3>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">

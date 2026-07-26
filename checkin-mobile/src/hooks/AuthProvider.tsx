@@ -13,6 +13,7 @@ import { leaveRepository } from '@/src/repositories/leaveRepository';
 import { attendanceRepository } from '@/src/repositories/attendanceRepository';
 import {
   changePasswordApi,
+  clearAuthCache,
   fetchMemberships,
   type CompanyMembership,
 } from '@/src/services/apiClient';
@@ -231,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await logoutRequest();
     await clearStoredCompanyId();
+    clearAuthCache();
     attendanceRepository.setUserId(null);
     attendanceRepository.setCompanyId(null);
     leaveRepository.setCompanyId(null);

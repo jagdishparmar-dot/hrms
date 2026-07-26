@@ -5,6 +5,7 @@ import {
 } from "@/components/attendance-directory";
 import {
   ATTENDANCE_PAGE_SIZE,
+  ATTENDANCE_PAGE_SIZE_OPTIONS,
   resolveAttendanceDateFilters,
 } from "@/lib/attendance-list";
 import {
@@ -13,6 +14,7 @@ import {
   listRegularizationsAction,
   listSitesAction,
 } from "@/lib/appwrite/phase1-actions";
+import { resolvePageSize } from "@/lib/pagination-ui";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata({
@@ -34,6 +36,7 @@ export default async function AttendancePage({
     geofence?: string;
     open?: string;
     page?: string;
+    size?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -43,6 +46,11 @@ export default async function AttendancePage({
     month: params.month,
   });
   const page = Math.max(1, Number(params.page || 1) || 1);
+  const pageSize = resolvePageSize(
+    params.size,
+    ATTENDANCE_PAGE_SIZE_OPTIONS,
+    ATTENDANCE_PAGE_SIZE,
+  );
 
   const filters: AttendanceFilters = {
     month: dates.month,
@@ -68,7 +76,7 @@ export default async function AttendancePage({
       geofenceStatus: filters.geofenceStatus || undefined,
       openShiftsOnly: filters.openShiftsOnly,
       page,
-      pageSize: ATTENDANCE_PAGE_SIZE,
+      pageSize,
     }),
     listRegularizationsAction(),
   ]);

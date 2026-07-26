@@ -28,6 +28,7 @@ import { assertNotProtectedSuperAdmin } from '@/lib/appwrite/super-admin';
 import {
   employeeCodeConfigFromSettings,
   formatEmployeeCode,
+  shouldAllocateEmployeeCode,
 } from '@/lib/employee-code';
 import {
   buildSalaryComponents,
@@ -37,6 +38,7 @@ import {
 import {
   employeeUpdatePayload,
   mapAttendance,
+  mapCompany,
   mapEmployee,
   mapHoliday,
   mapLeaveBalance,
@@ -75,11 +77,29 @@ import {
   type AttendanceRegisterResult,
   type RegisterDayFact,
 } from '@/lib/attendance-register';
+import type { SitesLiveSnapshot } from '@/lib/sites-live';
+import type { DashboardSnapshot } from '@/lib/dashboard';
+import {
+  assignmentLookupKey,
+  parseShiftRosterCsv,
+  SHIFT_ROSTER_IMPORT_MAX_BYTES,
+  shiftRosterCsvRowSchema,
+} from '@/lib/shift-roster-import';
+import {
+  SHIFT_ROSTER_REGISTER_EXPORT_MAX,
+  SHIFT_ROSTER_REGISTER_PAGE_SIZE,
+  buildShiftAssignmentLabelMap,
+  buildShiftRosterRows,
+  shiftRosterRowsToCsv,
+  type ShiftRosterRegisterFilters,
+  type ShiftRosterRegisterResult,
+} from '@/lib/shift-roster-register';
 import type {
   AttendanceRecord,
   AttendanceRegularization,
   CompanySettings,
   EmployeeMembership,
+  EmployeeLoginInfo,
   Holiday,
   LeaveBalance,
   LeaveRequest,
@@ -111,10 +131,13 @@ import {
   leaveTypeSchema,
   payrollRunSchema,
   regularizationSchema,
+  resetEmployeePasswordSchema,
   reviewLeaveSchema,
   reviewRegularizationSchema,
   salaryStructureSchema,
+  setEmployeeLoginAccessSchema,
   shiftAssignmentSchema,
+  shiftRosterCsvImportSchema,
   shiftSchema,
   siteSchema,
   threePlVendorSchema,
@@ -143,8 +166,15 @@ async function isEmployeeCodeInUse(companyId: string, code: string) {
   return result.total > 0;
 }
 
-async function allocateEmployeeCode(companyId: string, settings: CompanySettings) {
+async function allocateEmployeeCode(companyId: string) {
   const { databases } = createAdminClient();
+  const companyDoc = await databases.getDocument(
+    appwriteConfig.databaseId,
+    appwriteConfig.companiesCollectionId,
+    companyId,
+  );
+  const settings = mapCompany(companyDoc as unknown as Record<string, unknown>)
+    .settings;
   const config = employeeCodeConfigFromSettings(settings);
   let seq = config.nextSequence;
 
@@ -266,6 +296,44 @@ async function resolveEmployeeShiftAssignment(
   }
 }
 
+async function assertCanManageEmployeeLogin(
+  employee: EmployeeMembership,
+  actorUserId: string,
+  actionLabel: string,
+) {
+  if (employee.userId === actorUserId) {
+    throw new Error(`You cannot ${actionLabel} your own login from this screen.`);
+  }
+  assertNotProtectedSuperAdmin(employee.email, actionLabel);
+}
+
+function mapEmployeeLoginInfo(
+  employee: EmployeeMembership,
+  authUser: {
+    email?: string;
+    emailVerification?: boolean;
+    status?: boolean;
+    accessedAt?: string;
+    registration?: string;
+  } | null,
+): EmployeeLoginInfo {
+  const authUserActive = authUser?.status !== false;
+  const employeeActive = employee.status === 'active';
+
+  return {
+    userId: employee.userId,
+    email: authUser?.email || employee.email,
+    role: employee.role,
+    employeeStatus: employee.status,
+    authUserActive,
+    emailVerified: Boolean(authUser?.emailVerification),
+    mustChangePassword: employee.mustChangePassword,
+    lastAccessAt: authUser?.accessedAt || null,
+    registeredAt: authUser?.registration || null,
+    loginAllowed: employeeActive && authUserActive,
+  };
+}
+
 // ——— Employees ———
 
 export async function listEmployeesAction(search = '') {
@@ -322,6 +390,7 @@ export async function createEmployeeAction(formData: FormData) {
     department: formData.get('department') || '',
     designation: formData.get('designation') || '',
     phone: formData.get('phone') || '',
+    attendancePolicy: formData.get('attendancePolicy') || 'geofenced',
     primarySiteId: formData.get('primarySiteId') || '',
     workShiftStart: formData.get('workShiftStart') || '09:00',
     workShiftEnd: formData.get('workShiftEnd') || '18:00',
@@ -356,11 +425,10 @@ export async function createEmployeeAction(formData: FormData) {
   }
 
   let employeeCode = (data.employeeCode || '').trim();
-  const codeConfig = employeeCodeConfigFromSettings(ctx.company.settings);
 
-  if (!employeeCode && codeConfig.autoGenerate) {
+  if (shouldAllocateEmployeeCode(ctx.company.settings, employeeCode)) {
     try {
-      const allocated = await allocateEmployeeCode(ctx.company.id, ctx.company.settings);
+      const allocated = await allocateEmployeeCode(ctx.company.id);
       employeeCode = allocated.code;
     } catch (error) {
       return {
@@ -420,6 +488,7 @@ export async function createEmployeeAction(formData: FormData) {
         department: data.department || '',
         designation: data.designation || '',
         phone: data.phone || '',
+        attendancePolicy: data.attendancePolicy,
         primarySiteId: data.primarySiteId || '',
         alternateSiteIds: '[]',
         workShiftStart: shiftAssignment.workShiftStart,
@@ -516,6 +585,7 @@ export async function updateEmployeeAction(formData: FormData) {
     bankName: formData.get('bankName') || '',
     bankIfsc: formData.get('bankIfsc') || '',
     bankAccountNumber: formData.get('bankAccountNumber') || '',
+    attendancePolicy: formData.get('attendancePolicy') || undefined,
     primarySiteId: formData.get('primarySiteId') || '',
     workShiftStart: formData.get('workShiftStart') || '',
     workShiftEnd: formData.get('workShiftEnd') || '',
@@ -536,6 +606,17 @@ export async function updateEmployeeAction(formData: FormData) {
     const employee = await getEmployeeAction(parsed.data.employeeId);
     const employmentType =
       parsed.data.employmentType ?? (employee.employmentType || 'Permanent');
+    const nextPolicy = parsed.data.attendancePolicy ?? employee.attendancePolicy ?? 'geofenced';
+    const nextPrimarySiteId =
+      parsed.data.primarySiteId !== undefined
+        ? parsed.data.primarySiteId
+        : employee.primarySiteId;
+    if (nextPolicy === 'geofenced' && !nextPrimarySiteId.trim()) {
+      return {
+        ok: false as const,
+        error: 'Primary site is required for geofenced attendance.',
+      };
+    }
     const vendorId = resolveEmployeeVendorId(employmentType, parsed.data.vendorId);
     if (employmentType === '3PL') {
       const vendor = await getActiveThreePlVendor(ctx.company.id, vendorId);
@@ -623,6 +704,142 @@ export async function deactivateEmployeeAction(formData: FormData) {
     return { ok: true as const };
   } catch (error) {
     return { ok: false as const, error: toErrorMessage(error, 'Unable to deactivate employee.') };
+  }
+}
+
+export async function getEmployeeLoginInfoAction(
+  employeeId: string,
+): Promise<
+  { ok: true; info: EmployeeLoginInfo } | { ok: false; error: string }
+> {
+  await requireCompanyAdmin();
+  try {
+    const employee = await getEmployeeAction(employeeId);
+    const { users } = createAdminClient();
+    try {
+      const authUser = await users.get(employee.userId);
+      return {
+        ok: true as const,
+        info: mapEmployeeLoginInfo(employee, {
+          email: authUser.email,
+          emailVerification: authUser.emailVerification,
+          status: authUser.status,
+          accessedAt: authUser.accessedAt,
+          registration: authUser.registration,
+        }),
+      };
+    } catch {
+      return {
+        ok: true as const,
+        info: mapEmployeeLoginInfo(employee, null),
+      };
+    }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toErrorMessage(error, 'Unable to load login information.'),
+    };
+  }
+}
+
+export async function resetEmployeePasswordByAdminAction(formData: FormData) {
+  const ctx = await requireCompanyAdmin();
+  const parsed = resetEmployeePasswordSchema.safeParse({
+    employeeId: formData.get('employeeId'),
+    newPassword: formData.get('newPassword'),
+    confirmPassword: formData.get('confirmPassword'),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      error: parsed.error.issues[0]?.message || 'Invalid input.',
+    };
+  }
+
+  try {
+    const employee = await getEmployeeAction(parsed.data.employeeId);
+    await assertCanManageEmployeeLogin(
+      employee,
+      ctx.user.$id,
+      'reset the password for',
+    );
+
+    const { databases, users } = createAdminClient();
+    await users.updatePassword(employee.userId, parsed.data.newPassword);
+    await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.employeesCollectionId,
+      employee.id,
+      { mustChangePassword: true },
+    );
+
+    await writeAuditLog({
+      companyId: ctx.company.id,
+      teamId: ctx.company.teamId,
+      actorUserId: ctx.user.$id,
+      action: 'employee.password_reset',
+      entityType: 'employee',
+      entityId: employee.id,
+      meta: { targetUserId: employee.userId },
+    });
+
+    return { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toErrorMessage(error, 'Unable to reset password.'),
+    };
+  }
+}
+
+export async function setEmployeeLoginAccessAction(formData: FormData) {
+  const ctx = await requireCompanyAdmin();
+  const parsed = setEmployeeLoginAccessSchema.safeParse({
+    employeeId: formData.get('employeeId'),
+    blocked: formData.get('blocked'),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      error: parsed.error.issues[0]?.message || 'Invalid input.',
+    };
+  }
+
+  try {
+    const employee = await getEmployeeAction(parsed.data.employeeId);
+    await assertCanManageEmployeeLogin(
+      employee,
+      ctx.user.$id,
+      parsed.data.blocked ? 'block' : 'unblock',
+    );
+
+    const { databases, users } = createAdminClient();
+    const blocked = parsed.data.blocked;
+
+    await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.employeesCollectionId,
+      employee.id,
+      { status: blocked ? 'inactive' : 'active' },
+    );
+    await users.updateStatus(employee.userId, !blocked);
+
+    await writeAuditLog({
+      companyId: ctx.company.id,
+      teamId: ctx.company.teamId,
+      actorUserId: ctx.user.$id,
+      action: blocked ? 'employee.login_blocked' : 'employee.login_unblocked',
+      entityType: 'employee',
+      entityId: employee.id,
+      meta: { targetUserId: employee.userId },
+    });
+
+    return { ok: true as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toErrorMessage(error, 'Unable to update login access.'),
+    };
   }
 }
 
@@ -1067,6 +1284,362 @@ export async function generateRotationalRosterAction(formData: FormData) {
   return { ok: true as const, created };
 }
 
+async function fetchShiftAssignmentsInRange(
+  companyId: string,
+  from: string,
+  to: string,
+): Promise<EmployeeShiftAssignment[]> {
+  const { databases } = createAdminClient();
+  const rows: EmployeeShiftAssignment[] = [];
+  let offset = 0;
+  const limit = 200;
+
+  while (true) {
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.shiftAssignmentsCollectionId,
+      [
+        Query.equal('companyId', companyId),
+        Query.greaterThanEqual('dateIso', from),
+        Query.lessThanEqual('dateIso', to),
+        Query.limit(limit),
+        Query.offset(offset),
+      ],
+    );
+    rows.push(
+      ...result.documents.map((doc) =>
+        mapShiftAssignment(doc as unknown as Record<string, unknown>),
+      ),
+    );
+    if (result.documents.length < limit) break;
+    offset += limit;
+    if (offset >= 5000) break;
+  }
+
+  return rows;
+}
+
+export async function importShiftRosterCsvAction(formData: FormData) {
+  const ctx = await requireCompanyAdmin();
+  const meta = shiftRosterCsvImportSchema.safeParse({
+    fileName: formData.get('fileName') || '',
+  });
+  if (!meta.success) {
+    return { ok: false as const, error: meta.error.issues[0]?.message || 'Invalid upload.' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof File)) {
+    return { ok: false as const, error: 'Select a CSV file to upload.' };
+  }
+  if (file.size === 0) {
+    return { ok: false as const, error: 'CSV file is empty.' };
+  }
+  if (file.size > SHIFT_ROSTER_IMPORT_MAX_BYTES) {
+    return {
+      ok: false as const,
+      error: `File exceeds the ${Math.round(SHIFT_ROSTER_IMPORT_MAX_BYTES / 1024)} KB limit.`,
+    };
+  }
+
+  const fileName = file.name || meta.data.fileName || '';
+  if (
+    fileName &&
+    !/\.csv$/i.test(fileName) &&
+    file.type &&
+    !/(csv|text\/plain)/i.test(file.type)
+  ) {
+    return { ok: false as const, error: 'Upload a .csv file.' };
+  }
+
+  const parsedCsv = parseShiftRosterCsv(await file.text());
+  if (!parsedCsv.ok) {
+    return { ok: false as const, error: parsedCsv.error };
+  }
+
+  const [employees, shifts] = await Promise.all([
+    fetchAllActiveEmployees(ctx.company.id),
+    listShiftsAction(),
+  ]);
+
+  const employeeByCode = new Map<string, EmployeeMembership>();
+  for (const employee of employees) {
+    const key = employee.employeeCode.trim().toUpperCase();
+    if (key) employeeByCode.set(key, employee);
+  }
+
+  const shiftByCode = new Map<string, WorkShift>();
+  for (const shift of shifts) {
+    if (shift.status !== 'active') continue;
+    const key = shift.code.trim().toUpperCase();
+    if (key) shiftByCode.set(key, shift);
+  }
+
+  type ImportRow = {
+    lineNumber: number;
+    employeeId: string;
+    shiftId?: string;
+    dateIso: string;
+    sequence: number;
+    note: string;
+    clearOnly: boolean;
+    siteId: string;
+  };
+
+  const validRows: ImportRow[] = [];
+  const errors: string[] = [];
+
+  for (const { lineNumber, raw } of parsedCsv.rows) {
+    const rowParsed = shiftRosterCsvRowSchema.safeParse({
+      employeeCode: raw.employeeCode,
+      shiftCode: raw.shiftCode,
+      dateIso: raw.dateIso,
+      sequence: raw.sequence || 1,
+      note: raw.note || '',
+    });
+    if (!rowParsed.success) {
+      errors.push(
+        `Row ${lineNumber}: ${rowParsed.error.issues[0]?.message || 'Invalid row.'}`,
+      );
+      continue;
+    }
+
+    const row = rowParsed.data;
+    const employee = employeeByCode.get(row.employeeCode.toUpperCase());
+    if (!employee) {
+      errors.push(`Row ${lineNumber}: Unknown employee code "${row.employeeCode}".`);
+      continue;
+    }
+
+    if (row.shiftCode.toUpperCase() === 'OFF') {
+      validRows.push({
+        lineNumber,
+        employeeId: employee.id,
+        dateIso: row.dateIso,
+        sequence: row.sequence,
+        note: row.note || '',
+        clearOnly: true,
+        siteId: employee.primarySiteId || '',
+      });
+      continue;
+    }
+
+    const shift = shiftByCode.get(row.shiftCode.toUpperCase());
+    if (!shift) {
+      errors.push(`Row ${lineNumber}: Unknown shift code "${row.shiftCode}".`);
+      continue;
+    }
+
+    validRows.push({
+      lineNumber,
+      employeeId: employee.id,
+      shiftId: shift.id,
+      dateIso: row.dateIso,
+      sequence: row.sequence,
+      note: row.note || '',
+      clearOnly: false,
+      siteId: employee.primarySiteId || '',
+    });
+  }
+
+  if (validRows.length === 0) {
+    return {
+      ok: false as const,
+      error: errors[0] || 'No valid rows to import.',
+      errors,
+    };
+  }
+
+  const sortedDates = validRows.map((row) => row.dateIso).sort();
+  const existing = await fetchShiftAssignmentsInRange(
+    ctx.company.id,
+    sortedDates[0]!,
+    sortedDates[sortedDates.length - 1]!,
+  );
+  const existingByKey = new Map(
+    existing.map((row) => [
+      assignmentLookupKey(row.employeeId, row.dateIso, row.sequence),
+      row,
+    ]),
+  );
+
+  const { databases } = createAdminClient();
+  let created = 0;
+  let updated = 0;
+  let cleared = 0;
+
+  try {
+    for (const row of validRows) {
+      const key = assignmentLookupKey(row.employeeId, row.dateIso, row.sequence);
+      const existingRow = existingByKey.get(key);
+
+      if (row.clearOnly) {
+        if (existingRow) {
+          await databases.deleteDocument(
+            appwriteConfig.databaseId,
+            appwriteConfig.shiftAssignmentsCollectionId,
+            existingRow.id,
+          );
+          existingByKey.delete(key);
+          cleared += 1;
+        }
+        continue;
+      }
+
+      const payload = {
+        companyId: ctx.company.id,
+        employeeId: row.employeeId,
+        dateIso: row.dateIso,
+        shiftId: row.shiftId!,
+        sequence: row.sequence,
+        siteId: row.siteId,
+        status: 'scheduled' as const,
+        note: row.note || '',
+      };
+
+      if (existingRow) {
+        await databases.updateDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.shiftAssignmentsCollectionId,
+          existingRow.id,
+          payload,
+        );
+        updated += 1;
+      } else {
+        const doc = await databases.createDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.shiftAssignmentsCollectionId,
+          ID.unique(),
+          payload,
+          employeeDocumentPermissions(ctx.company.teamId),
+        );
+        existingByKey.set(
+          key,
+          mapShiftAssignment(doc as unknown as Record<string, unknown>),
+        );
+        created += 1;
+      }
+    }
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: toErrorMessage(error, 'Unable to import roster CSV.'),
+    };
+  }
+
+  await writeAuditLog({
+    companyId: ctx.company.id,
+    teamId: ctx.company.teamId,
+    actorUserId: ctx.user.$id,
+    action: 'shift_roster.csv_imported',
+    entityType: 'shift_assignment',
+    meta: {
+      fileName: fileName || undefined,
+      created,
+      updated,
+      cleared,
+      failed: errors.length,
+      totalRows: parsedCsv.rows.length,
+    },
+  });
+
+  return {
+    ok: true as const,
+    created,
+    updated,
+    cleared,
+    failed: errors.length,
+    errors: errors.slice(0, 50),
+    totalRows: parsedCsv.rows.length,
+  };
+}
+
+async function buildShiftRosterRegister(
+  filters: ShiftRosterRegisterFilters,
+  options: { paginate: boolean },
+): Promise<ShiftRosterRegisterResult> {
+  const ctx = await requireCompanyAdmin();
+  const month = /^\d{4}-\d{2}$/.test(filters.month) ? filters.month : currentRegisterMonth();
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(
+    options.paginate ? 100 : SHIFT_ROSTER_REGISTER_EXPORT_MAX,
+    filters.pageSize ?? SHIFT_ROSTER_REGISTER_PAGE_SIZE,
+  );
+  const sort = filters.sort === 'name' ? 'name' : 'code';
+  const { daysInMonth, monthDays } = getMonthDays(month);
+  const from = monthDays[0]!;
+  const to = monthDays[monthDays.length - 1]!;
+
+  const [employees, sites, shifts, assignments] = await Promise.all([
+    fetchAllActiveEmployees(ctx.company.id),
+    listSitesAction(),
+    listShiftsAction(),
+    fetchShiftAssignmentsInRange(ctx.company.id, from, to),
+  ]);
+
+  const shiftCodeById = new Map(
+    shifts.map((shift) => [shift.id, shift.code.trim().toUpperCase()]),
+  );
+  const assignmentLabels = buildShiftAssignmentLabelMap(assignments, shiftCodeById);
+  const siteNameById = new Map(sites.map((site) => [site.id, site.name]));
+  const departments = [...new Set(employees.map((e) => e.department).filter(Boolean))].sort();
+  const designations = [...new Set(employees.map((e) => e.designation).filter(Boolean))].sort();
+  const branches = sites
+    .filter((site) => site.status === 'active')
+    .map((site) => ({ id: site.id, name: site.name }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const shiftCodes = shifts
+    .filter((shift) => shift.status === 'active')
+    .map((shift) => shift.code.trim().toUpperCase())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+
+  const filtered = sortRegisterEmployees(
+    filterRegisterEmployees(employees, filters, siteNameById),
+    sort,
+  );
+  const total = filtered.length;
+  const slice = options.paginate
+    ? filtered.slice((page - 1) * pageSize, page * pageSize)
+    : filtered.slice(0, SHIFT_ROSTER_REGISTER_EXPORT_MAX);
+
+  const rows = buildShiftRosterRows(slice, month, assignmentLabels);
+
+  return {
+    month,
+    daysInMonth,
+    monthDays,
+    rows,
+    total,
+    page,
+    pageSize,
+    departments,
+    designations,
+    branches,
+    shiftCodes,
+  };
+}
+
+export async function getShiftRosterRegisterAction(
+  filters: ShiftRosterRegisterFilters,
+): Promise<ShiftRosterRegisterResult> {
+  return buildShiftRosterRegister(filters, { paginate: true });
+}
+
+export async function exportShiftRosterRegisterCsvAction(filters: ShiftRosterRegisterFilters) {
+  await requireCompanyAdmin();
+  const register = await buildShiftRosterRegister(filters, { paginate: false });
+  if (register.rows.length === 0) {
+    return { ok: false as const, error: 'No employees match these filters for export.' };
+  }
+  return {
+    ok: true as const,
+    csv: shiftRosterRowsToCsv(register.rows, register.month, register.daysInMonth),
+    rowCount: register.rows.length,
+    month: register.month,
+  };
+}
+
 // ——— Sites ———
 
 export async function listSitesAction(): Promise<Site[]> {
@@ -1078,6 +1651,77 @@ export async function listSitesAction(): Promise<Site[]> {
     [Query.equal('companyId', ctx.company.id), Query.limit(100)],
   );
   return result.documents.map((d) => mapSite(d as unknown as Record<string, unknown>));
+}
+
+const LIVE_PUNCH_CUTOFF_MS = 48 * 60 * 60 * 1000;
+
+export async function getSitesLivePresenceAction(): Promise<SitesLiveSnapshot> {
+  const ctx = await requireCompanyAdmin();
+  const { databases } = createAdminClient();
+  const cutoff = Date.now() - LIVE_PUNCH_CUTOFF_MS;
+
+  const [attendanceResult, employeesResult, sites] = await Promise.all([
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.attendanceCollectionId,
+      [
+        Query.equal('companyId', ctx.company.id),
+        Query.isNull('clockOutTime'),
+        Query.isNotNull('clockInTime'),
+        Query.orderDesc('clockInTimestamp'),
+        Query.limit(200),
+      ],
+    ),
+    listEmployeesAction(),
+    listSitesAction(),
+  ]);
+
+  const employeeById = new Map(
+    employeesResult.employees.map((employee) => [employee.id, employee]),
+  );
+  const siteById = new Map(sites.map((site) => [site.id, site]));
+
+  const checkedIn = attendanceResult.documents
+    .map((doc) => mapAttendance(doc as unknown as Record<string, unknown>))
+    .filter((row) => Number(row.clockInTimestamp || 0) >= cutoff)
+    .map((row) => {
+      const employee = employeeById.get(row.employeeId);
+      const site = row.siteId ? siteById.get(row.siteId) : undefined;
+      return {
+        attendanceId: row.id,
+        employeeId: row.employeeId,
+        employeeName: employee?.name || row.employeeName || 'Employee',
+        employeeCode: employee?.employeeCode || row.employeeCode || '',
+        siteId: row.siteId,
+        siteName: site?.name || row.locationName || 'Unassigned',
+        clockInTime: row.clockInTime || '',
+        clockInTimestamp: Number(row.clockInTimestamp || 0),
+        geofenceStatus: row.geofenceStatus,
+        punchInLat: row.punchInLat,
+        punchInLong: row.punchInLong,
+        locationName: row.locationName,
+        status: row.status,
+      };
+    });
+
+  const bySiteId: Record<string, number> = {};
+  let fieldCount = 0;
+
+  for (const row of checkedIn) {
+    if (row.siteId && siteById.has(row.siteId)) {
+      bySiteId[row.siteId] = (bySiteId[row.siteId] || 0) + 1;
+    } else {
+      fieldCount += 1;
+    }
+  }
+
+  return {
+    checkedIn,
+    bySiteId,
+    fieldCount,
+    totalCheckedIn: checkedIn.length,
+    fetchedAt: new Date().toISOString(),
+  };
 }
 
 export async function upsertSiteAction(formData: FormData) {
@@ -1416,7 +2060,7 @@ async function buildAttendanceRegister(
   const month = /^\d{4}-\d{2}$/.test(filters.month) ? filters.month : currentRegisterMonth();
   const page = Math.max(1, filters.page ?? 1);
   const pageSize = Math.min(
-    options.paginate ? REGISTER_PAGE_SIZE : REGISTER_EXPORT_MAX,
+    options.paginate ? 100 : REGISTER_EXPORT_MAX,
     filters.pageSize ?? REGISTER_PAGE_SIZE,
   );
   const sort = filters.sort === 'name' ? 'name' : 'code';
@@ -1489,13 +2133,25 @@ export async function exportAttendanceRegisterCsvAction(filters: AttendanceRegis
   };
 }
 
-export async function getDashboardStatsAction() {
+export async function getDashboardStatsAction(): Promise<DashboardSnapshot> {
   const ctx = await requireTenantMember();
   const { databases } = createAdminClient();
   const tz = ctx.company.settings.timezone || 'Asia/Kolkata';
   const { dateIso: today } = dateIsoInTimeZone(Date.now(), tz);
   const yesterday = addDaysIso(today, -1);
-  const [employees, attendance, overnightOpen, empDocs, recentDocs] = await Promise.all([
+
+  const [
+    activeEmpCount,
+    inactiveEmpCount,
+    invitedEmpCount,
+    empDocs,
+    attendance,
+    overnightOpen,
+    recentDocs,
+    pendingLeaveDocs,
+    approvedLeaveDocs,
+    pendingRegDocs,
+  ] = await Promise.all([
     databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.employeesCollectionId,
@@ -1503,11 +2159,26 @@ export async function getDashboardStatsAction() {
     ),
     databases.listDocuments(
       appwriteConfig.databaseId,
+      appwriteConfig.employeesCollectionId,
+      [Query.equal('companyId', ctx.company.id), Query.equal('status', 'inactive'), Query.limit(1)],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.employeesCollectionId,
+      [Query.equal('companyId', ctx.company.id), Query.equal('status', 'invited'), Query.limit(1)],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.employeesCollectionId,
+      [Query.equal('companyId', ctx.company.id), Query.limit(500)],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
       appwriteConfig.attendanceCollectionId,
       [
         Query.equal('companyId', ctx.company.id),
         Query.equal('dateIso', today),
-        Query.limit(200),
+        Query.limit(500),
       ],
     ),
     databases.listDocuments(
@@ -1522,42 +2193,155 @@ export async function getDashboardStatsAction() {
     ),
     databases.listDocuments(
       appwriteConfig.databaseId,
-      appwriteConfig.employeesCollectionId,
-      [Query.equal('companyId', ctx.company.id), Query.limit(200)],
-    ),
-    databases.listDocuments(
-      appwriteConfig.databaseId,
       appwriteConfig.attendanceCollectionId,
       [
         Query.equal('companyId', ctx.company.id),
-        Query.orderDesc('dateIso'),
-        Query.limit(10),
+        Query.orderDesc('clockInTimestamp'),
+        Query.limit(12),
+      ],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.leaveRequestsCollectionId,
+      [
+        Query.equal('companyId', ctx.company.id),
+        Query.equal('status', 'pending'),
+        Query.orderDesc('$createdAt'),
+        Query.limit(8),
+      ],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.leaveRequestsCollectionId,
+      [
+        Query.equal('companyId', ctx.company.id),
+        Query.equal('status', 'approved'),
+        Query.lessThanEqual('fromDate', today),
+        Query.limit(200),
+      ],
+    ),
+    databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.regularizationsCollectionId,
+      [
+        Query.equal('companyId', ctx.company.id),
+        Query.equal('status', 'pending'),
+        Query.limit(1),
       ],
     ),
   ]);
-  const rows = attendance.documents.map((d) =>
-    mapAttendance(d as unknown as Record<string, unknown>),
-  );
-  const openOvernight = overnightOpen.documents
-    .map((d) => mapAttendance(d as unknown as Record<string, unknown>))
-    .filter((r) => r.clockInTime && !r.clockOutTime);
+
   const byId = new Map(
     empDocs.documents.map((d) => {
       const e = mapEmployee(d as unknown as Record<string, unknown>);
       return [e.id, e] as const;
     }),
   );
-  const recent = recentDocs.documents.map((d) => {
-    const row = mapAttendance(d as unknown as Record<string, unknown>);
-    return { ...row, employeeName: byId.get(row.employeeId)?.name || row.userId };
+
+  const byType: Record<string, number> = {};
+  for (const doc of empDocs.documents) {
+    const e = mapEmployee(doc as unknown as Record<string, unknown>);
+    if (e.status !== 'active') continue;
+    const key = e.employmentType || 'Other';
+    byType[key] = (byType[key] || 0) + 1;
+  }
+
+  const rows = attendance.documents.map((d) =>
+    mapAttendance(d as unknown as Record<string, unknown>),
+  );
+  const openOvernight = overnightOpen.documents
+    .map((d) => mapAttendance(d as unknown as Record<string, unknown>))
+    .filter((r) => r.clockInTime && !r.clockOutTime);
+
+  const present = rows.filter((r) => r.status === 'PRESENT').length;
+  const late = rows.filter((r) => r.status === 'LATE').length;
+  const absent = rows.filter((r) => r.status === 'ABSENT').length;
+  const onLeave = rows.filter(
+    (r) => r.status === 'ON_LEAVE' || r.status === 'LEAVE_PENDING',
+  ).length;
+  const halfDay = rows.filter((r) => r.status === 'HALF_DAY').length;
+  const markedEmployeeIds = new Set(rows.map((r) => r.employeeId));
+  const openToday = rows.filter((r) => r.clockInTime && !r.clockOutTime);
+  const openShifts = openToday.length + openOvernight.length;
+
+  const leaveTypes = await listLeaveTypesAction();
+  const typeById = new Map(leaveTypes.map((t) => [t.id, t.name]));
+
+  const pendingItems = pendingLeaveDocs.documents.map((d) => {
+    const row = mapLeaveRequest(d as unknown as Record<string, unknown>);
+    return {
+      id: row.id,
+      employeeName: byId.get(row.employeeId)?.name || 'Employee',
+      leaveTypeName: typeById.get(row.leaveTypeId) || 'Leave',
+      fromDate: row.fromDate,
+      toDate: row.toDate,
+      days: row.days,
+      status: row.status,
+    };
   });
 
+  const onLeaveTodayItems = approvedLeaveDocs.documents
+    .map((d) => mapLeaveRequest(d as unknown as Record<string, unknown>))
+    .filter((row) => row.toDate >= today)
+    .map((row) => ({
+      id: row.id,
+      employeeName: byId.get(row.employeeId)?.name || 'Employee',
+      leaveTypeName: typeById.get(row.leaveTypeId) || 'Leave',
+      fromDate: row.fromDate,
+      toDate: row.toDate,
+      days: row.days,
+      status: row.status,
+    }))
+    .slice(0, 8);
+
+  const onDutyNow = [...openToday, ...openOvernight]
+    .sort((a, b) => Number(b.clockInTimestamp || 0) - Number(a.clockInTimestamp || 0))
+    .slice(0, 10)
+    .map((row) => ({
+      employeeId: row.employeeId,
+      employeeName: byId.get(row.employeeId)?.name || row.employeeName || 'Employee',
+      clockInTime: row.clockInTime || '',
+      siteName: row.locationName || '—',
+      status: row.status,
+      geofenceStatus: row.geofenceStatus,
+    }));
+
+  const recent = recentDocs.documents.map((d) => {
+    const row = mapAttendance(d as unknown as Record<string, unknown>);
+    return {
+      ...row,
+      employeeName: byId.get(row.employeeId)?.name || row.userId,
+    };
+  });
+
+  const active = activeEmpCount.total;
+
   return {
-    employees: employees.total,
-    presentToday: rows.filter((r) => r.status === 'PRESENT' || r.status === 'LATE' || r.status === 'HALF_DAY').length,
-    lateToday: rows.filter((r) => r.status === 'LATE').length,
-    openShifts:
-      rows.filter((r) => r.clockInTime && !r.clockOutTime).length + openOvernight.length,
+    today,
+    employees: {
+      active,
+      inactive: inactiveEmpCount.total,
+      invited: invitedEmpCount.total,
+      byType,
+    },
+    attendance: {
+      present,
+      late,
+      absent,
+      onLeave,
+      halfDay,
+      openShifts,
+      marked: markedEmployeeIds.size,
+      unmarked: Math.max(0, active - markedEmployeeIds.size),
+    },
+    leave: {
+      pending: pendingLeaveDocs.total,
+      onLeaveToday: onLeaveTodayItems.length,
+      pendingItems,
+      onLeaveTodayItems,
+    },
+    regularizationsPending: pendingRegDocs.total,
+    onDutyNow,
     recent,
   };
 }

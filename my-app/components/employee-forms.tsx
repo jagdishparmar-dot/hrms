@@ -10,20 +10,24 @@ import {
   FormSelect,
   FormSuccess,
 } from '@/components/form-fields';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   createEmployeeAction,
   updateEmployeeAction,
   upsertSalaryStructureAction,
 } from '@/lib/appwrite/phase1-actions';
-import type {
-  EmployeeMembership,
-  SalaryStructure,
-  Site,
-  ThreePlVendor,
-  WorkShift,
+import {
+  ATTENDANCE_POLICY_LABELS,
+  maskAadhaar,
+  maskBankAccount,
+  type EmployeeMembership,
+  type SalaryStructure,
+  type Site,
+  type ThreePlVendor,
+  type WorkShift,
 } from '@/lib/appwrite/types';
-import { maskAadhaar, maskBankAccount } from '@/lib/appwrite/types';
 import { formatShiftWindowLabel } from '@/lib/attendance-shift';
 import { salaryAmountsFromComponents, zeroSalaryAmounts } from '@/lib/salary-structure';
 
@@ -221,6 +225,7 @@ export function CreateEmployeeForm({
   const orgConfigured =
     orgConfig.departments.length > 0 && orgConfig.designations.length > 0;
   const [employmentType, setEmploymentType] = useState<string>('Permanent');
+  const [attendancePolicy, setAttendancePolicy] = useState<string>('geofenced');
   const [pending, startTransition] = useTransition();
 
   return (
@@ -253,17 +258,42 @@ export function CreateEmployeeForm({
         required
         minLength={8}
       />
-      <FormField name="employeeCode" label="Employee code" defaultValue={employeeCodeConfig.suggestedCode} placeholder={employeeCodeConfig.autoGenerate ? 'Auto-generated if empty' : 'Required'} required={!employeeCodeConfig.autoGenerate} />
       {employeeCodeConfig.autoGenerate ? (
-        <p className="text-xs text-muted-foreground sm:col-span-2">
-          Auto-generates from prefix{' '}
-          <span className="font-mono text-foreground">{employeeCodeConfig.prefix}</span> configured in{' '}
-          <Link href="/settings" className="font-medium text-foreground underline underline-offset-4">
-            Company settings → Organization
-          </Link>
-          . Clear the field to assign the next sequence on save.
-        </p>
-      ) : null}
+        <div className="grid gap-2 sm:col-span-2">
+          <Label htmlFor="employeeCode-preview">Employee code</Label>
+          <div className="flex min-h-9 flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-muted/30 px-3 py-2 dark:border-slate-800">
+            <span
+              id="employeeCode-preview"
+              className="font-mono text-sm font-semibold tracking-tight"
+            >
+              {employeeCodeConfig.suggestedCode}
+            </span>
+            <Badge variant="outline" className="text-[10px]">
+              Next on save
+            </Badge>
+          </div>
+          <input type="hidden" name="employeeCode" value="" />
+          <p className="text-xs text-muted-foreground">
+            Uses prefix{' '}
+            <span className="font-mono text-foreground">{employeeCodeConfig.prefix}</span>{' '}
+            from{' '}
+            <Link
+              href="/settings"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              Company settings → Organization
+            </Link>
+            . The sequence advances after each employee is created.
+          </p>
+        </div>
+      ) : (
+        <FormField
+          name="employeeCode"
+          label="Employee code"
+          placeholder="Required"
+          required
+        />
+      )}
       <FormSelect
         name="employmentType"
         label="Employment type"
@@ -277,6 +307,16 @@ export function CreateEmployeeForm({
         <ThreePlVendorField vendors={vendors} required />
       ) : null}
       <FormField name="phone" label="Phone" required />
+      <FormSelect
+        name="attendancePolicy"
+        label="Attendance policy"
+        options={Object.entries(ATTENDANCE_POLICY_LABELS).map(([value, label]) => ({
+          value,
+          label,
+        }))}
+        defaultValue="geofenced"
+        onValueChange={setAttendancePolicy}
+      />
       <ShiftSelectField shifts={shifts} />
       <FormField name="workShiftStart" label="Fallback start" defaultValue="09:00" required />
       <FormField name="workShiftEnd" label="Fallback end" defaultValue="18:00" required />
@@ -286,8 +326,20 @@ export function CreateEmployeeForm({
         className="sm:col-span-2"
         placeholder="Unassigned"
         options={sites.map((s) => ({ value: s.id, label: s.name }))}
-        required
+        required={attendancePolicy === 'geofenced'}
       />
+      {attendancePolicy === 'gps_logged' ? (
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Field employees can punch from any location. GPS is logged for audit; geofence is not
+          enforced. Assigning a primary site is optional but helps show a reference location in the
+          app.
+        </p>
+      ) : attendancePolicy === 'manual' ? (
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Self punch is disabled in the mobile app. HR or a manager must mark attendance or approve
+          regularization.
+        </p>
+      ) : null}
       <div className="sm:col-span-2">
         {!orgConfigured ? (
           <p className="mb-3 text-sm text-muted-foreground">
@@ -341,6 +393,9 @@ export function EditEmployeeForm({
   const [employmentType, setEmploymentType] = useState<string>(
     employee.employmentType || 'Permanent',
   );
+  const [attendancePolicy, setAttendancePolicy] = useState<string>(
+    employee.attendancePolicy || 'geofenced',
+  );
   const [pending, startTransition] = useTransition();
 
   return (
@@ -392,6 +447,16 @@ export function EditEmployeeForm({
         <ThreePlVendorField vendors={vendors} defaultValue={employee.vendorId} required />
       ) : null}
       <FormField name="phone" label="Phone" defaultValue={employee.phone} />
+      <FormSelect
+        name="attendancePolicy"
+        label="Attendance policy"
+        options={Object.entries(ATTENDANCE_POLICY_LABELS).map(([value, label]) => ({
+          value,
+          label,
+        }))}
+        defaultValue={employee.attendancePolicy || 'geofenced'}
+        onValueChange={setAttendancePolicy}
+      />
       <FormField
         name="dateOfJoining"
         label="Date of joining"
@@ -415,7 +480,17 @@ export function EditEmployeeForm({
         placeholder="Unassigned"
         defaultValue={employee.primarySiteId}
         options={sites.map((s) => ({ value: s.id, label: s.name }))}
+        required={attendancePolicy === 'geofenced'}
       />
+      {attendancePolicy === 'gps_logged' ? (
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Field employees can punch from any location. GPS is logged for audit.
+        </p>
+      ) : attendancePolicy === 'manual' ? (
+        <p className="text-sm text-muted-foreground sm:col-span-2">
+          Self punch is disabled in the mobile app for this employee.
+        </p>
+      ) : null}
       {showExtendedFields ? (
         <>
           <FormField name="panNumber" label="PAN" defaultValue={employee.panNumber} />

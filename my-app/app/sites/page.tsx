@@ -1,25 +1,31 @@
 import { AdminShell } from "@/components/admin-shell";
-import { PageHeader } from "@/components/page-header";
 import { SitesDirectory } from "@/components/sites-directory";
-import { listSitesAction } from "@/lib/appwrite/phase1-actions";
+import {
+  getSitesLivePresenceAction,
+  listSitesAction,
+} from "@/lib/appwrite/phase1-actions";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata({
   title: "Sites",
-  description: "Manage geofenced office sites used for mobile attendance check-in.",
+  description: "Live site map, geofence management, and on-duty workforce tracking.",
   path: "/sites",
 });
 
 export default async function SitesPage() {
-  const sites = await listSitesAction();
+  const [sites, live] = await Promise.all([
+    listSitesAction(),
+    getSitesLivePresenceAction(),
+  ]);
 
   return (
-    <AdminShell title="Sites" subtitle="Geofence locations for mobile punch">
-      <PageHeader
-        title="Sites"
-        description="Define office geofences, radii, and availability for mobile check-in."
-      />
-      <SitesDirectory sites={sites} />
+    <AdminShell
+      title="Sites"
+      subtitle="Live map · geofences · on-duty tracking"
+    >
+      <div className="@container/main flex flex-col gap-5">
+        <SitesDirectory sites={sites} initialLive={live} />
+      </div>
     </AdminShell>
   );
 }

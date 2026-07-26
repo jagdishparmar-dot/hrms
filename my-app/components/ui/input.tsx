@@ -2,8 +2,24 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const inputClassName =
-  "h-8 w-full min-w-0 rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-base transition-[color,box-shadow] duration-200 outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+/** Shared border, background, focus, and disabled styles for form controls. */
+const formControlClassName =
+  "rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm transition-colors outline-none placeholder:text-slate-400 focus-visible:border-rose-500 focus-visible:ring-2 focus-visible:ring-rose-500/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+
+const inputClassName = cn(
+  formControlClassName,
+  "flex h-9 w-full min-w-0 px-3 py-1.5 text-xs md:text-sm",
+)
+
+const textareaClassName = cn(
+  formControlClassName,
+  "field-sizing-content flex min-h-16 w-full resize-none px-3 py-2 text-xs md:text-sm",
+)
+
+const selectTriggerClassName = cn(
+  formControlClassName,
+  "flex w-full items-center justify-between gap-1.5 px-3 py-2 text-xs whitespace-nowrap md:text-sm data-placeholder:text-slate-400 dark:data-placeholder:text-slate-500",
+)
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
@@ -16,4 +32,10 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   )
 }
 
-export { Input, inputClassName }
+export {
+  Input,
+  formControlClassName,
+  inputClassName,
+  selectTriggerClassName,
+  textareaClassName,
+}

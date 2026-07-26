@@ -10,7 +10,10 @@ import {
   FormSuccess,
 } from '@/components/form-fields';
 import { ConfirmStatusDialog } from '@/components/platform/confirm-status-dialog';
-import { Badge } from '@/components/ui/badge';
+import {
+  PlatformStatusBadge,
+  PlatformTableShell,
+} from '@/components/platform/platform-section';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -30,7 +33,7 @@ import { DEFAULT_MODULES } from '@/lib/appwrite/types';
 export function PlatformCompanyLifecycle({ company }: { company: Company }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Badge variant="secondary">{company.status}</Badge>
+      <PlatformStatusBadge status={company.status} />
       {company.status !== 'active' ? (
         <ConfirmStatusDialog
           companyId={company.id}
@@ -284,25 +287,33 @@ export function PlatformCompanyUsersTable({
   memberships: EmployeeMembership[];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <PlatformTableShell>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
+          <TableRow className="border-border/80 hover:bg-transparent">
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Name
+            </TableHead>
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Role
+            </TableHead>
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Status
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {memberships.map((m) => (
-            <TableRow key={m.id}>
+            <TableRow key={m.id} className="border-border/60 hover:bg-muted/30">
               <TableCell>
-                <div className="font-medium">{m.name}</div>
-                <div className="text-xs text-muted-foreground">{m.email}</div>
+                <div className="font-semibold text-foreground">{m.name}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  {m.email}
+                </div>
               </TableCell>
-              <TableCell>{m.role}</TableCell>
+              <TableCell className="capitalize">{m.role.replaceAll('_', ' ')}</TableCell>
               <TableCell>
-                <Badge variant="secondary">{m.status}</Badge>
+                <PlatformStatusBadge status={m.status} />
               </TableCell>
             </TableRow>
           ))}
@@ -315,37 +326,43 @@ export function PlatformCompanyUsersTable({
           ) : null}
         </TableBody>
       </Table>
-    </div>
+    </PlatformTableShell>
   );
 }
 
 export function PlatformAuditTable({ logs }: { logs: AuditLog[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <PlatformTableShell>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>When</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>Actor</TableHead>
+          <TableRow className="border-border/80 hover:bg-transparent">
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              When
+            </TableHead>
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Action
+            </TableHead>
+            <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Actor
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {logs.map((log) => (
-            <TableRow key={log.id}>
-              <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+            <TableRow key={log.id} className="border-border/60 hover:bg-muted/30">
+              <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
                 {log.$createdAt
                   ? new Date(log.$createdAt).toLocaleString()
                   : '—'}
               </TableCell>
               <TableCell>
-                <div className="font-medium">{log.action}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="font-semibold text-foreground">{log.action}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
                   {log.entityType}
                   {log.entityId ? ` · ${log.entityId.slice(0, 8)}` : ''}
                 </div>
               </TableCell>
-              <TableCell className="font-mono text-xs">
+              <TableCell className="font-mono text-xs text-rose-300/90">
                 {log.actorUserId.slice(0, 12)}…
               </TableCell>
             </TableRow>
@@ -359,6 +376,6 @@ export function PlatformAuditTable({ logs }: { logs: AuditLog[] }) {
           ) : null}
         </TableBody>
       </Table>
-    </div>
+    </PlatformTableShell>
   );
 }

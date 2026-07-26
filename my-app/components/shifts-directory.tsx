@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { FormSelect } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,9 +18,6 @@ import { Label } from "@/components/ui/label";
 import { upsertShiftAction } from "@/lib/appwrite/phase1-actions";
 import type { WorkShift } from "@/lib/appwrite/types";
 import { formatShiftWindowLabel } from "@/lib/attendance-shift";
-
-const selectClassName =
-  "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ShiftsDirectory({ shifts }: { shifts: WorkShift[] }) {
   const router = useRouter();
@@ -77,21 +75,18 @@ export function ShiftsDirectory({ shifts }: { shifts: WorkShift[] }) {
                 placeholder="NIGHT"
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="shiftType">Type</Label>
-              <select
-                id="shiftType"
-                name="shiftType"
-                className={selectClassName}
-                defaultValue={editing?.shiftType || "general"}
-              >
-                <option value="general">General day</option>
-                <option value="evening">Evening</option>
-                <option value="night">Night</option>
-                <option value="cross_midnight">Cross-midnight</option>
-                <option value="rotational">Rotational</option>
-              </select>
-            </div>
+            <FormSelect
+              name="shiftType"
+              label="Type"
+              defaultValue={editing?.shiftType || "general"}
+              options={[
+                { value: "general", label: "General day" },
+                { value: "evening", label: "Evening" },
+                { value: "night", label: "Night" },
+                { value: "cross_midnight", label: "Cross-midnight" },
+                { value: "rotational", label: "Rotational" },
+              ]}
+            />
             <div className="grid gap-1.5">
               <Label htmlFor="startTime">Start</Label>
               <Input
@@ -202,18 +197,15 @@ export function ShiftsDirectory({ shifts }: { shifts: WorkShift[] }) {
                 defaultValue={editing?.overtimeAfterMinutes ?? 480}
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                name="status"
-                className={selectClassName}
-                defaultValue={editing?.status || "active"}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            <FormSelect
+              name="status"
+              label="Status"
+              defaultValue={editing?.status || "active"}
+              options={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ]}
+            />
             <div className="flex gap-2 sm:col-span-2">
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving…" : editing ? "Update shift" : "Create shift"}

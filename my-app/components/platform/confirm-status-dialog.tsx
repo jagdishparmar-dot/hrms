@@ -60,7 +60,7 @@ export function ConfirmStatusDialog({
         {LABELS[status]}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogContent className="rounded-2xl border-border bg-card sm:max-w-md" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>{LABELS[status]} tenant</DialogTitle>
             <DialogDescription>

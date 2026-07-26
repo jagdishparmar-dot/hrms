@@ -83,9 +83,9 @@ function statusBg(status: string) {
     case 'HALF_DAY':
       return Colors.warningLight;
     case 'ON_LEAVE':
-      return '#EDE9FE';
+      return Colors.inTransitLight;
     case 'LEAVE_PENDING':
-      return '#E0E7FF';
+      return Colors.muted;
     default:
       return Colors.destructiveLight;
   }
@@ -609,7 +609,7 @@ function AttendanceLogCard({
     <Pressable
       style={styles.logCard}
       onPress={onPress}
-      android_ripple={{ color: 'rgba(46,107,230,0.08)' }}>
+      android_ripple={{ color: Colors.ripple }}>
       <View style={styles.logTopRow}>
         <View style={styles.logLeft}>
           <View style={[styles.logDayBox, { backgroundColor: statusBg(record.status) }]}>
@@ -1430,7 +1430,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(46, 107, 230, 0.1)',
+    backgroundColor: Colors.secondaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },

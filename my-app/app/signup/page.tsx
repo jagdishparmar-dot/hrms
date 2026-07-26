@@ -20,10 +20,13 @@ export default async function SignupPage() {
     <AuthShell
       contentClassName="mx-auto flex w-full max-w-md flex-col justify-center space-y-8 px-6 py-16 sm:px-0"
       topLink={
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs text-slate-500 dark:text-slate-400">
           Already have an account?{" "}
-          <Link href="/login" className="text-foreground">
-            Login
+          <Link
+            href="/login"
+            className="font-semibold text-indigo-600 transition-colors hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            Sign in
           </Link>
         </div>
       }

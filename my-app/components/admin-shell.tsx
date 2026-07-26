@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
+import { Building2, Sparkles } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -20,6 +16,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/appwrite/auth";
 import { isCompanyAdminRole } from "@/lib/appwrite/types";
+import { cn } from "@/lib/utils";
 
 export async function AdminShell({
   children,
@@ -78,8 +75,16 @@ export async function AdminShell({
     showPlatform = isPlatformAdminEmail(ctx.user.email || "");
   }
 
+  const isPlatform = mode === "platform";
+  const shellBadge = isPlatform ? "Platform console" : "HRMS Portal";
+  const accentLine = isPlatform
+    ? "from-transparent via-rose-500/50 to-transparent"
+    : "from-transparent via-indigo-500/50 to-transparent";
+
   return (
     <SidebarProvider
+      data-shell-mode={mode}
+      className={cn("admin-shell min-h-svh bg-background selection:bg-primary/30")}
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 68)",
@@ -93,36 +98,64 @@ export async function AdminShell({
         showPlatform={showPlatform}
         mode={mode}
       />
-      <SidebarInset className="min-w-0 overflow-x-clip [--dashboard-header-height:--spacing(12)]">
-        <header className="sticky top-0 z-50 flex h-12 shrink-0 items-center gap-2 border-b bg-background/50 backdrop-blur-md transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex w-full items-center justify-between px-4 lg:px-6">
-            <div className="flex min-w-0 items-center gap-1 lg:gap-2">
-              <SidebarTrigger className="-ml-1" />
+      <SidebarInset className="min-w-0 overflow-x-clip bg-background [--dashboard-header-height:--spacing(14)]">
+        <header className="sticky top-0 z-50 shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
+          <div
+            className={cn(
+              "h-px w-full bg-linear-to-r",
+              accentLine,
+            )}
+          />
+          <div className="flex h-14 items-center justify-between gap-3 px-4 lg:px-6">
+            <div className="flex min-w-0 items-center gap-2 lg:gap-3">
+              <SidebarTrigger className="-ml-1 text-muted-foreground hover:bg-muted hover:text-foreground" />
               <Separator
                 orientation="vertical"
-                className="mx-2 data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center"
+                className="mx-1 hidden h-5 sm:block"
               />
-              <div className="min-w-0">
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbPage className="truncate font-medium">
-                        {title}
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-                {subtitle ? (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {subtitle}
-                  </p>
-                ) : null}
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className={cn(
+                    "hidden size-9 shrink-0 items-center justify-center rounded-xl border sm:flex",
+                    isPlatform
+                      ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                      : "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+                  )}
+                >
+                  <Building2 className="size-4" />
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-sm font-bold tracking-tight text-foreground sm:text-base">
+                      {title}
+                    </h1>
+                    <span
+                      className={cn(
+                        "hidden rounded-full border px-2 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider sm:inline-flex sm:items-center sm:gap-1",
+                        isPlatform
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-300"
+                          : "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
+                      )}
+                    >
+                      <Sparkles className="size-3" />
+                      {shellBadge}
+                    </span>
+                  </div>
+                  {subtitle ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {subtitle}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
-            {action ? <div className="shrink-0">{action}</div> : null}
+            <div className="flex shrink-0 items-center gap-2">
+              <ThemeToggle showLabel={false} />
+              {action}
+            </div>
           </div>
         </header>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 md:gap-6 md:p-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 md:gap-6 md:p-6 lg:p-8">
           {children}
         </div>
       </SidebarInset>

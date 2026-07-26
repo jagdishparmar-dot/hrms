@@ -1,12 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ComponentType } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Download, Filter, Info, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Clock3,
+  Download,
+  Filter,
+  Info,
+  MapPinOff,
+  Palmtree,
+  Search,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AttendanceScheduleList } from "@/components/attendance-schedule-list";
+import { FilterSelect } from "@/components/form-fields";
 import { RegularizationReview } from "@/components/regularization-review";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,21 +44,30 @@ import { Label } from "@/components/ui/label";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
+  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ATTENDANCE_PAGE_SIZE_OPTIONS } from "@/lib/attendance-list";
 import { exportAttendanceCsvAction } from "@/lib/appwrite/phase1-actions";
+import { formatMinutesShort, getVisiblePages } from "@/lib/pagination-ui";
 import type {
   AttendanceRecord,
   AttendanceRegularization,
   EmployeeMembership,
   Site,
 } from "@/lib/appwrite/types";
-
-const selectClassName =
-  "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+import { cn } from "@/lib/utils";
 
 export type AttendanceFilters = {
   month: string;
@@ -92,7 +114,12 @@ function buildAttendanceQuery(
   };
 }
 
-function buildPageHref(pathname: string, filters: AttendanceFilters, page: number) {
+function buildPageHref(
+  pathname: string,
+  filters: AttendanceFilters,
+  page: number,
+  pageSize: number,
+) {
   const params = new URLSearchParams();
   if (filters.month) params.set("month", filters.month);
   if (filters.dateFrom) params.set("from", filters.dateFrom);
@@ -103,8 +130,17 @@ function buildPageHref(pathname: string, filters: AttendanceFilters, page: numbe
   if (filters.geofenceStatus) params.set("geofence", filters.geofenceStatus);
   if (filters.openShiftsOnly) params.set("open", "1");
   if (page > 1) params.set("page", String(page));
+  if (pageSize !== 25) params.set("size", String(pageSize));
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
+}
+
+function dateRangeLabel(filters: AttendanceFilters) {
+  if (filters.dateFrom && filters.dateTo) {
+    if (filters.dateFrom === filters.dateTo) return filters.dateFrom;
+    return `${filters.dateFrom} → ${filters.dateTo}`;
+  }
+  return filters.month || "Current month";
 }
 
 export function AttendanceDirectory({
@@ -190,17 +226,8 @@ export function AttendanceDirectory({
   }, [filtered]);
 
   function applyFilters(next: AttendanceFilters) {
-    const params = new URLSearchParams();
-    if (next.month) params.set("month", next.month);
-    if (next.dateFrom) params.set("from", next.dateFrom);
-    if (next.dateTo) params.set("to", next.dateTo);
-    if (next.status) params.set("status", next.status);
-    if (next.userId) params.set("userId", next.userId);
-    if (next.siteId) params.set("siteId", next.siteId);
-    if (next.geofenceStatus) params.set("geofence", next.geofenceStatus);
-    if (next.openShiftsOnly) params.set("open", "1");
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(buildPageHref(pathname, next, 1, pagination.pageSize));
     });
   }
 
@@ -301,46 +328,96 @@ export function AttendanceDirectory({
   }
 
   const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
+  const visiblePages = getVisiblePages(pagination.page, totalPages);
   const rangeStart =
     pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
+  function goToPage(page: number) {
+    startTransition(() => {
+      router.push(buildPageHref(pathname, filters, page, pagination.pageSize));
+    });
+  }
+
+  function setPageSize(size: number) {
+    startTransition(() => {
+      router.push(buildPageHref(pathname, filters, 1, size));
+    });
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" disabled>
-          Daily log
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          nativeButton={false}
-          render={<Link href="/attendance/monthly" />}
-        >
-          Monthly register
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Daily attendance log
+          </p>
+          <p className="text-sm font-medium">{dateRangeLabel(filters)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" disabled>
+            Daily log
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/attendance/monthly" />}
+          >
+            Monthly register
+          </Button>
+        </div>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <AttendanceKpiCard
-          label="Present / late"
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+        <CompactStat
+          label="Present"
           value={stats.present}
-          hint={`${stats.late} late on this page`}
+          hint={`${stats.late} late`}
+          icon={UserCheck}
+          tone="emerald"
         />
-        <AttendanceKpiCard
-          label="Absent / leave"
+        <CompactStat
+          label="Absent"
           value={stats.absent}
-          hint={`${stats.onLeave} on leave · ${stats.leavePending} pending`}
+          hint="This page"
+          icon={AlertTriangle}
+          tone="rose"
         />
-        <AttendanceKpiCard
-          label="Open shifts"
+        <CompactStat
+          label="Leave"
+          value={stats.onLeave + stats.leavePending}
+          hint={`${stats.leavePending} pending`}
+          icon={Palmtree}
+          tone="sky"
+        />
+        <CompactStat
+          label="Open"
           value={stats.open}
-          hint={`${stats.outside} outside geofence on page`}
+          hint="No punch-out"
+          icon={Clock3}
+          tone="violet"
         />
-        <AttendanceKpiCard
-          label="People tracked"
+        <CompactStat
+          label="Outside"
+          value={stats.outside}
+          hint="Geofence"
+          icon={MapPinOff}
+          tone="amber"
+        />
+        <CompactStat
+          label="People"
           value={stats.uniqueEmployees}
-          hint={`${pagination.total} total in filter`}
+          hint={`${pagination.total} filtered`}
+          icon={Users}
+          tone="indigo"
+        />
+        <CompactStat
+          label="Avg time"
+          value={formatMinutesShort(stats.avgMinutes)}
+          hint="Per record"
+          icon={Clock3}
+          tone="indigo"
         />
       </section>
 
@@ -388,35 +465,112 @@ export function AttendanceDirectory({
                     </Button>
                   </div>
                   <AttendanceScheduleList rows={filtered} />
-                  {totalPages > 1 ? (
-                    <Pagination className="justify-start">
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            href={buildPageHref(pathname, filters, pagination.page - 1)}
-                            className={
-                              pagination.page <= 1 ? "pointer-events-none opacity-50" : undefined
-                            }
-                          />
-                        </PaginationItem>
-                        <PaginationItem>
-                          <span className="px-3 text-sm text-muted-foreground tabular-nums">
-                            Page {pagination.page} of {totalPages}
-                          </span>
-                        </PaginationItem>
-                        <PaginationItem>
-                          <PaginationNext
-                            href={buildPageHref(pathname, filters, pagination.page + 1)}
-                            className={
-                              pagination.page >= totalPages
-                                ? "pointer-events-none opacity-50"
-                                : undefined
-                            }
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  ) : null}
+                  <div className="flex flex-col gap-3 border-t pt-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                      <p className="text-sm text-muted-foreground">
+                        Showing{" "}
+                        <span className="font-medium text-foreground tabular-nums">
+                          {rangeStart}–{rangeEnd}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-medium text-foreground tabular-nums">
+                          {pagination.total}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Rows</span>
+                        <Select
+                          value={String(pagination.pageSize)}
+                          onValueChange={(value) => {
+                            if (!value) return;
+                            setPageSize(Number(value));
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[4.5rem]" size="sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent align="start">
+                            {ATTENDANCE_PAGE_SIZE_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={String(option)}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {totalPages > 1 ? (
+                      <Pagination className="mx-0 w-auto justify-start lg:justify-end">
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href={buildPageHref(
+                                pathname,
+                                filters,
+                                pagination.page - 1,
+                                pagination.pageSize,
+                              )}
+                              className={
+                                pagination.page <= 1
+                                  ? "pointer-events-none opacity-50"
+                                  : undefined
+                              }
+                              onClick={(event) => {
+                                event.preventDefault();
+                                if (pagination.page <= 1) return;
+                                goToPage(pagination.page - 1);
+                              }}
+                            />
+                          </PaginationItem>
+                          {visiblePages.map((pageNumber, index) =>
+                            pageNumber === "ellipsis" ? (
+                              <PaginationItem key={`ellipsis-${index}`}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            ) : (
+                              <PaginationItem key={pageNumber}>
+                                <PaginationLink
+                                  href={buildPageHref(
+                                    pathname,
+                                    filters,
+                                    pageNumber,
+                                    pagination.pageSize,
+                                  )}
+                                  isActive={pageNumber === pagination.page}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    goToPage(pageNumber);
+                                  }}
+                                >
+                                  {pageNumber}
+                                </PaginationLink>
+                              </PaginationItem>
+                            ),
+                          )}
+                          <PaginationItem>
+                            <PaginationNext
+                              href={buildPageHref(
+                                pathname,
+                                filters,
+                                pagination.page + 1,
+                                pagination.pageSize,
+                              )}
+                              className={
+                                pagination.page >= totalPages
+                                  ? "pointer-events-none opacity-50"
+                                  : undefined
+                              }
+                              onClick={(event) => {
+                                event.preventDefault();
+                                if (pagination.page >= totalPages) return;
+                                goToPage(pagination.page + 1);
+                              }}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -471,43 +625,32 @@ export function AttendanceDirectory({
                         }
                       />
                     </div>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="status">Status</Label>
-                      <select
-                        id="status"
-                        className={selectClassName}
-                        value={draft.status}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, status: e.target.value }))
-                        }
-                      >
-                        <option value="">All statuses</option>
-                        <option value="PRESENT">PRESENT</option>
-                        <option value="LATE">LATE</option>
-                        <option value="HALF_DAY">HALF_DAY</option>
-                        <option value="ABSENT">ABSENT</option>
-                        <option value="ON_LEAVE">ON_LEAVE</option>
-                        <option value="LEAVE_PENDING">LEAVE_PENDING</option>
-                      </select>
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="userId">Employee</Label>
-                      <select
-                        id="userId"
-                        className={selectClassName}
-                        value={draft.userId}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, userId: e.target.value }))
-                        }
-                      >
-                        <option value="">All employees</option>
-                        {employees.map((employee) => (
-                          <option key={employee.userId} value={employee.userId}>
-                            {employee.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <FilterSelect
+                      id="status"
+                      label="Status"
+                      allLabel="All statuses"
+                      value={draft.status}
+                      onValueChange={(status) => setDraft((d) => ({ ...d, status }))}
+                      options={[
+                        { value: "PRESENT", label: "Present" },
+                        { value: "LATE", label: "Late" },
+                        { value: "HALF_DAY", label: "Half day" },
+                        { value: "ABSENT", label: "Absent" },
+                        { value: "ON_LEAVE", label: "On leave" },
+                        { value: "LEAVE_PENDING", label: "Leave pending" },
+                      ]}
+                    />
+                    <FilterSelect
+                      id="userId"
+                      label="Employee"
+                      allLabel="All employees"
+                      value={draft.userId}
+                      onValueChange={(userId) => setDraft((d) => ({ ...d, userId }))}
+                      options={employees.map((employee) => ({
+                        value: employee.userId,
+                        label: employee.name,
+                      }))}
+                    />
 
                     <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
                       <CollapsibleTrigger className="inline-flex h-8 items-center gap-1.5 rounded-2xl px-0 text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -537,43 +680,32 @@ export function AttendanceDirectory({
                             }
                           />
                         </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="siteId">Site</Label>
-                          <select
-                            id="siteId"
-                            className={selectClassName}
-                            value={draft.siteId}
-                            onChange={(e) =>
-                              setDraft((d) => ({ ...d, siteId: e.target.value }))
-                            }
-                          >
-                            <option value="">All sites</option>
-                            {sites.map((site) => (
-                              <option key={site.id} value={site.id}>
-                                {site.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="geofence">Geofence</Label>
-                          <select
-                            id="geofence"
-                            className={selectClassName}
-                            value={draft.geofenceStatus}
-                            onChange={(e) =>
-                              setDraft((d) => ({
-                                ...d,
-                                geofenceStatus: e.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">All</option>
-                            <option value="INSIDE">INSIDE</option>
-                            <option value="OUTSIDE">OUTSIDE</option>
-                            <option value="UNKNOWN">UNKNOWN</option>
-                          </select>
-                        </div>
+                        <FilterSelect
+                          id="siteId"
+                          label="Site"
+                          allLabel="All sites"
+                          value={draft.siteId}
+                          onValueChange={(siteId) => setDraft((d) => ({ ...d, siteId }))}
+                          options={sites.map((site) => ({
+                            value: site.id,
+                            label: site.name,
+                          }))}
+                        />
+                        <FilterSelect
+                          id="geofence"
+                          label="Geofence"
+                          allLabel="All geofence states"
+                          value={draft.geofenceStatus}
+                          onValueChange={(geofenceStatus) =>
+                            setDraft((d) => ({ ...d, geofenceStatus }))
+                          }
+                          options={[
+                            { value: "INSIDE", label: "Inside" },
+                            { value: "OUTSIDE", label: "Outside" },
+                            { value: "GPS_ONLY", label: "GPS only" },
+                            { value: "UNKNOWN", label: "Unknown" },
+                          ]}
+                        />
                         <label className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
@@ -626,28 +758,50 @@ export function AttendanceDirectory({
   );
 }
 
-function AttendanceKpiCard({
+function CompactStat({
   label,
   value,
   hint,
+  icon: Icon,
+  tone = "indigo",
 }: {
   label: string;
   value: string | number;
   hint: string;
+  icon: ComponentType<{ className?: string }>;
+  tone?: "indigo" | "emerald" | "amber" | "rose" | "sky" | "violet";
 }) {
+  const toneClass = {
+    indigo:
+      "border-indigo-200/80 bg-indigo-50 text-indigo-600 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-400",
+    emerald:
+      "border-emerald-200/80 bg-emerald-50 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400",
+    amber:
+      "border-amber-200/80 bg-amber-50 text-amber-600 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400",
+    rose: "border-rose-200/80 bg-rose-50 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400",
+    sky: "border-sky-200/80 bg-sky-50 text-sky-600 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-400",
+    violet:
+      "border-violet-200/80 bg-violet-50 text-violet-600 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400",
+  }[tone];
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{label}</CardTitle>
-        <CardAction>
-          <Info className="size-3 text-muted-foreground" />
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col">
-        <div className="text-3xl text-foreground leading-none tracking-tight tabular-nums">
-          {value}
+    <Card size="sm" className="shadow-xs">
+      <CardContent className="flex items-center gap-2.5 py-2.5">
+        <div
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-md border",
+            toneClass,
+          )}
+        >
+          <Icon className="size-3.5" />
         </div>
-        <div className="text-right text-muted-foreground text-xs">{hint}</div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <p className="text-base font-bold tabular-nums leading-tight">{value}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{hint}</p>
+        </div>
       </CardContent>
     </Card>
   );

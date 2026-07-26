@@ -1,7 +1,12 @@
 import { AttendanceMonthlyGrid } from "@/components/attendance-monthly-grid";
 import { AdminShell } from "@/components/admin-shell";
-import { currentRegisterMonth } from "@/lib/attendance-register";
+import {
+  currentRegisterMonth,
+  REGISTER_PAGE_SIZE,
+  REGISTER_PAGE_SIZE_OPTIONS,
+} from "@/lib/attendance-register";
 import { getAttendanceRegisterAction } from "@/lib/appwrite/phase1-actions";
+import { resolvePageSize } from "@/lib/pagination-ui";
 import { pageMetadata } from "@/lib/site-metadata";
 
 export const metadata = pageMetadata({
@@ -21,6 +26,7 @@ export default async function AttendanceMonthlyPage({
     designation?: string;
     sort?: string;
     page?: string;
+    size?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -28,6 +34,11 @@ export default async function AttendanceMonthlyPage({
     ? params.month!
     : currentRegisterMonth();
   const page = Math.max(1, Number(params.page || 1) || 1);
+  const pageSize = resolvePageSize(
+    params.size,
+    REGISTER_PAGE_SIZE_OPTIONS,
+    REGISTER_PAGE_SIZE,
+  );
   const sort = params.sort === "name" ? "name" : "code";
 
   const filters = {
@@ -42,6 +53,7 @@ export default async function AttendanceMonthlyPage({
   const register = await getAttendanceRegisterAction({
     month,
     page,
+    pageSize,
     search: filters.search || undefined,
     department: filters.department || undefined,
     branch: filters.branch || undefined,

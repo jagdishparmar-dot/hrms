@@ -1,7 +1,13 @@
+import { Shield, Users } from 'lucide-react';
+
 import { AdminShell } from '@/components/admin-shell';
-import { PageHeader } from '@/components/page-header';
-import { PlatformSection } from '@/components/platform/platform-section';
-import { Badge } from '@/components/ui/badge';
+import {
+  PlatformInfoList,
+  PlatformPageBanner,
+  PlatformSection,
+  PlatformStatusBadge,
+  PlatformTableShell,
+} from '@/components/platform/platform-section';
 import {
   Table,
   TableBody,
@@ -27,67 +33,93 @@ export default async function PlatformUsersPage() {
 
   return (
     <AdminShell mode="platform" title="Users & roles" subtitle="Platform access">
-      <PageHeader
-        title="User & role management"
-        description="Platform Super Admins are allowlisted (PLATFORM_ADMIN_EMAILS + default Super Admin). Tenant roles remain company-scoped on employees."
-      />
+      <div className="flex flex-col gap-6">
+        <PlatformPageBanner
+          badge="Access control"
+          title="User & role management"
+          description="Platform Super Admins are allowlisted (PLATFORM_ADMIN_EMAILS + default Super Admin). Tenant roles remain company-scoped on employees."
+          icon={Users}
+        />
 
-      <PlatformSection
-        title="Platform administrators"
-        description={`Default Super Admin ${DEFAULT_SUPER_ADMIN_EMAIL} is always included and protected from deletion/deactivation.`}
-      >
-        <div className="overflow-x-auto rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Auth status</TableHead>
-                <TableHead>Protection</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {admins.map((admin) => (
-                <TableRow key={admin.email}>
-                  <TableCell className="font-medium">{admin.email}</TableCell>
-                  <TableCell>{admin.name || '—'}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{admin.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {admin.protected ? (
-                      <Badge>Protected Super Admin</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">Allowlisted</span>
-                    )}
-                  </TableCell>
+        <PlatformSection
+          title="Platform administrators"
+          description={`Default Super Admin ${DEFAULT_SUPER_ADMIN_EMAIL} is always included and protected from deletion/deactivation.`}
+          icon={Shield}
+        >
+          <PlatformTableShell>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/80 hover:bg-transparent">
+                  <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Email
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Name
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Auth status
+                  </TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Protection
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </PlatformSection>
+              </TableHeader>
+              <TableBody>
+                {admins.map((admin) => (
+                  <TableRow
+                    key={admin.email}
+                    className="border-border/60 hover:bg-muted/30"
+                  >
+                    <TableCell className="font-mono text-xs font-medium">
+                      {admin.email}
+                    </TableCell>
+                    <TableCell>{admin.name || '—'}</TableCell>
+                    <TableCell>
+                      <PlatformStatusBadge status={admin.status} />
+                    </TableCell>
+                    <TableCell>
+                      {admin.protected ? (
+                        <PlatformStatusBadge status="protected" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Allowlisted
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </PlatformTableShell>
+        </PlatformSection>
 
-      <PlatformSection
-        title="Tenant roles"
-        description="Enforced inside each company via employees.role and Appwrite Team membership."
-      >
-        <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-          <li>
-            <span className="text-foreground">company_admin</span> — full tenant
-            administration
-          </li>
-          <li>
-            <span className="text-foreground">hr_manager / payroll_admin /
-            reporting_manager / vendor_admin / employee</span>{' '}
-            — tenant-scoped roles (schema ready)
-          </li>
-          <li>
-            <span className="text-foreground">platform_admin</span> — not a tenant
-            membership; email allowlist only, unrestricted across tenants
-          </li>
-        </ul>
-      </PlatformSection>
+        <PlatformSection
+          title="Tenant roles"
+          description="Enforced inside each company via employees.role and Appwrite Team membership."
+          icon={Users}
+        >
+          <PlatformInfoList
+            items={[
+              <>
+                <span className="font-semibold text-foreground">company_admin</span>{' '}
+                — full tenant administration
+              </>,
+              <>
+                <span className="font-semibold text-foreground">
+                  hr_manager / payroll_admin / reporting_manager / vendor_admin /
+                  employee
+                </span>{' '}
+                — tenant-scoped roles (schema ready)
+              </>,
+              <>
+                <span className="font-semibold text-foreground">platform_admin</span>{' '}
+                — not a tenant membership; email allowlist only, unrestricted
+                across tenants
+              </>,
+            ]}
+          />
+        </PlatformSection>
+      </div>
     </AdminShell>
   );
 }

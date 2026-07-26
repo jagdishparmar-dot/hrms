@@ -15,12 +15,16 @@ import {
   attendanceRepository,
   DEFAULT_USER_PROFILE,
 } from '@/src/repositories/attendanceRepository';
+import { fetchTodayShiftSchedule } from '@/src/repositories/shiftRepository';
+import { warmAuthHeaders } from '@/src/services/apiClient';
 import {
   checkLocationPermission,
   getCurrentLocationWithPermission,
+  getPunchLocation,
   requestLocationPermission,
+  warmLocationCache,
 } from '@/src/services/locationService';
-import type { MainUiState, UserProfile } from '@/src/types';
+import type { AttendanceRecord, MainUiState, TodayShiftSchedule, UserProfile } from '@/src/types';
 import {
   getCurrentDateHeader,
   getCurrentTime,
@@ -44,6 +48,50 @@ interface AttendanceContextValue {
   reloadData: () => Promise<void>;
 }
 
+const EMPTY_SHIFT_SCHEDULE: TodayShiftSchedule = {
+  dateIso: '',
+  timezone: '',
+  shifts: [],
+};
+
+function fallbackShiftSchedule(profile: UserProfile, todayIso: string): TodayShiftSchedule {
+  const start = profile.workShiftStart || '09:00';
+  const end = profile.workShiftEnd || '18:00';
+  return {
+    dateIso: todayIso,
+    timezone: '',
+    shifts: [
+      {
+        dateIso: todayIso,
+        sequence: 1,
+        shiftId: '',
+        name: 'Assigned hours',
+        code: 'DEFAULT',
+        shiftType: 'general',
+        startTime: start,
+        endTime: end,
+        windowLabel: `${start} – ${end}`,
+        source: 'default',
+      },
+    ],
+  };
+}
+
+function mergeAttendanceRecord(
+  records: AttendanceRecord[],
+  record: AttendanceRecord,
+): AttendanceRecord[] {
+  const index = records.findIndex(
+    (item) => item.id === record.id || item.dateIso === record.dateIso,
+  );
+  if (index >= 0) {
+    const next = [...records];
+    next[index] = { ...next[index], ...record };
+    return next;
+  }
+  return [record, ...records];
+}
+
 const AttendanceContext = createContext<AttendanceContextValue | null>(null);
 
 const initialExtraState = {
@@ -62,6 +110,8 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const [userProfile, setUserProfile] = useState(DEFAULT_USER_PROFILE);
   const [allRecords, setAllRecords] = useState<MainUiState['allRecords']>([]);
+  const [todayShiftSchedule, setTodayShiftSchedule] =
+    useState<TodayShiftSchedule>(EMPTY_SHIFT_SCHEDULE);
   const [timeState, setTimeState] = useState({
     currentTimeFormatted: getCurrentTime(),
     currentDateFormatted: getCurrentDateHeader(),
@@ -80,6 +130,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) {
       setUserProfile(DEFAULT_USER_PROFILE);
       setAllRecords([]);
+      setTodayShiftSchedule(EMPTY_SHIFT_SCHEDULE);
       return;
     }
 
@@ -91,6 +142,15 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       setUserProfile(profile);
     }
     setAllRecords(records);
+
+    try {
+      const schedule = await fetchTodayShiftSchedule(attendanceRepository.getCompanyId());
+      setTodayShiftSchedule(schedule);
+    } catch {
+      setTodayShiftSchedule(
+        fallbackShiftSchedule(profile ?? DEFAULT_USER_PROFILE, getTodayIso()),
+      );
+    }
   }, [isAuthenticated]);
 
   const refreshAll = useCallback(async () => {
@@ -112,10 +172,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
               profile.officeLongitude,
               profile.geofenceRadiusMeters,
             );
-            const updated = await attendanceRepository.updateLocationStatus(
-              location.distanceMeters,
-              location.isWithinGeofence,
-            );
+            const updated = await attendanceRepository.updateLocationStatus(location);
             setUserProfile(updated);
           }
         } catch {
@@ -152,10 +209,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
             profile.officeLongitude,
             profile.geofenceRadiusMeters,
           );
-          const updated = await attendanceRepository.updateLocationStatus(
-            location.distanceMeters,
-            location.isWithinGeofence,
-          );
+          const updated = await attendanceRepository.updateLocationStatus(location);
           if (mounted) {
             setUserProfile(updated);
           }
@@ -163,6 +217,9 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           // Location refresh on launch is best-effort.
         }
       }
+
+      void warmLocationCache();
+      void warmAuthHeaders(attendanceRepository.getCompanyId());
     }
 
     bootstrap();
@@ -204,6 +261,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const uiState: MainUiState = {
     userProfile,
     todayRecord,
+    todayShiftSchedule,
     allRecords,
     ...timeState,
     ...extra,
@@ -230,10 +288,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
         profile.officeLongitude,
         profile.geofenceRadiusMeters,
       );
-      const updated = await attendanceRepository.updateLocationStatus(
-        location.distanceMeters,
-        location.isWithinGeofence,
-      );
+      const updated = await attendanceRepository.updateLocationStatus(location);
       setUserProfile(updated);
       setExtra((prev) => ({
         ...prev,
@@ -269,6 +324,16 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   }, [refreshLocation]);
 
   const handleClockAction = useCallback(async () => {
+    const policy = userProfile.attendancePolicy || 'geofenced';
+
+    if (policy === 'manual') {
+      setExtra((prev) => ({
+        ...prev,
+        snackbarMessage: 'Self punch is disabled for your account. Contact HR to mark attendance.',
+      }));
+      return;
+    }
+
     if (todayRecord == null && !extra.hasLocationPermission) {
       setExtra((prev) => ({ ...prev, showLocationPermissionDialog: true }));
       return;
@@ -276,54 +341,42 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
 
     setExtra((prev) => ({ ...prev, isClockInLoading: true }));
 
+    const deviceId =
+      Constants.installationId || Constants.sessionId || Constants.deviceName || undefined;
+
+    void attendanceRepository.warmPunchAuth();
+
     try {
-      if (todayRecord == null) {
-        let distanceMeters = userProfile.lastKnownDistanceMeters;
-        try {
-          const location = await getCurrentLocationWithPermission(
-            userProfile.officeLatitude,
-            userProfile.officeLongitude,
-            userProfile.geofenceRadiusMeters,
-          );
-          distanceMeters = location.distanceMeters;
-          const updated = await attendanceRepository.updateLocationStatus(
-            location.distanceMeters,
-            location.isWithinGeofence,
-          );
-          setUserProfile(updated);
-
-          if (!location.isWithinGeofence) {
-            setExtra((prev) => ({
-              ...prev,
-              isClockInLoading: false,
-              snackbarMessage: `You are ${location.distanceMeters}m from office. Check-in requires being within ${userProfile.geofenceRadiusMeters}m.`,
-            }));
-            return;
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unable to verify location';
-          setExtra((prev) => ({
-            ...prev,
-            isClockInLoading: false,
-            snackbarMessage: message,
-          }));
-          return;
-        }
-
-        const location = await getCurrentLocationWithPermission(
+      const resolvePunchLocation = async () => {
+        const requireGeofence = policy === 'geofenced';
+        const location = await getPunchLocation(
           userProfile.officeLatitude,
           userProfile.officeLongitude,
           userProfile.geofenceRadiusMeters,
+          {
+            requireGeofence,
+            cached: attendanceRepository.getLocationCache(),
+          },
         );
-        const deviceId =
-          Constants.installationId || Constants.sessionId || Constants.deviceName || undefined;
+        const updated = await attendanceRepository.updateLocationStatus(location);
+        setUserProfile(updated);
+        if (requireGeofence && !location.isWithinGeofence) {
+          throw new Error(
+            `You are ${location.distanceMeters}m from site. Check-in requires being within ${userProfile.geofenceRadiusMeters}m.`,
+          );
+        }
+        return location;
+      };
+
+      if (todayRecord == null) {
+        const location = await resolvePunchLocation();
         const newRecord = await attendanceRepository.clockIn({
           lat: location.latitude,
           long: location.longitude,
           accuracy: location.accuracy ?? undefined,
           deviceId,
         });
-        await reloadData();
+        setAllRecords((records) => mergeAttendanceRecord(records, newRecord));
         setExtra((prev) => ({
           ...prev,
           isClockInLoading: false,
@@ -331,26 +384,22 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           successClockInTime: newRecord.clockInTime,
           snackbarMessage: `Successfully clocked in at ${newRecord.clockInTime}!`,
         }));
+        void reloadData();
       } else if (todayRecord.clockOutTime == null) {
-        const location = await getCurrentLocationWithPermission(
-          userProfile.officeLatitude,
-          userProfile.officeLongitude,
-          userProfile.geofenceRadiusMeters,
-        );
-        const deviceId =
-          Constants.installationId || Constants.sessionId || Constants.deviceName || undefined;
+        const location = await resolvePunchLocation();
         const updated = await attendanceRepository.clockOut({
           lat: location.latitude,
           long: location.longitude,
           accuracy: location.accuracy ?? undefined,
           deviceId,
         });
-        await reloadData();
+        setAllRecords((records) => mergeAttendanceRecord(records, updated));
         setExtra((prev) => ({
           ...prev,
           isClockInLoading: false,
           snackbarMessage: `Clocked out at ${updated.clockOutTime}! Total working time: ${updated.totalHoursFormatted}`,
         }));
+        void reloadData();
       } else {
         setExtra((prev) => ({
           ...prev,
@@ -369,9 +418,6 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   }, [
     extra.hasLocationPermission,
     reloadData,
-    timeState.dayOfWeek,
-    timeState.formattedDateOnly,
-    timeState.todayIso,
     todayRecord,
     userProfile,
   ]);
