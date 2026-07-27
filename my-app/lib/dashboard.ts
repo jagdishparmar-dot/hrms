@@ -10,6 +10,33 @@ export type DashboardLeaveItem = {
   status: string;
 };
 
+export type DashboardRegularizationItem = {
+  id: string;
+  employeeName: string;
+  dateIso: string;
+  requestedClockIn: string;
+  requestedClockOut: string;
+  requestedOutDateIso: string;
+  reason: string;
+};
+
+export type DashboardShiftChangeItem = {
+  id: string;
+  employeeName: string;
+  dateIso: string;
+  sequence: number;
+  currentShiftLabel: string;
+  requestedShiftLabel: string;
+  reason: string;
+};
+
+export type DashboardAdminQueues = {
+  regularizationsPending: number;
+  regularizationItems: DashboardRegularizationItem[];
+  shiftChangesPending: number;
+  shiftChangeItems: DashboardShiftChangeItem[];
+};
+
 export type DashboardOnDutyItem = {
   employeeId: string;
   employeeName: string;
@@ -44,6 +71,7 @@ export type DashboardSnapshot = {
     onLeaveTodayItems: DashboardLeaveItem[];
   };
   regularizationsPending: number;
+  adminQueues: DashboardAdminQueues | null;
   onDutyNow: DashboardOnDutyItem[];
   recent: AttendanceRecord[];
 };

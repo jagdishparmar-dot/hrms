@@ -83,7 +83,6 @@ async function setCompanyCookie(companyId: string) {
 export async function signupAction(formData: FormData) {
   const parsed = signupSchema.safeParse({
     companyName: formData.get('companyName'),
-    slug: formData.get('slug'),
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
@@ -107,7 +106,6 @@ export async function signupAction(formData: FormData) {
 
     const { company } = await provisionCompany({
       companyName: data.companyName,
-      slug: data.slug,
       ownerUserId: user.$id,
       ownerEmail: data.email,
       ownerName: data.name,

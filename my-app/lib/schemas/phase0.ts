@@ -10,7 +10,6 @@ export const slugSchema = z
 
 export const signupSchema = z.object({
   companyName: z.string().trim().min(2).max(128),
-  slug: slugSchema,
   name: z.string().trim().min(2).max(128),
   email: z.string().trim().email().toLowerCase(),
   password: z.string().min(8).max(256),

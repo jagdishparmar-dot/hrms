@@ -25,14 +25,24 @@ export default async function ShiftsPage() {
         title="Shifts"
         description="Attendance is keyed to the shift business date. Overnight punch-out stays on the original shift record."
         actions={
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/shifts/roster" />}
-          >
-            Open roster
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/shifts/scenarios" />}
+            >
+              Test scenarios
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/shifts/roster" />}
+            >
+              Open roster
+            </Button>
+          </div>
         }
       />
       <ShiftsDirectory shifts={shifts} />

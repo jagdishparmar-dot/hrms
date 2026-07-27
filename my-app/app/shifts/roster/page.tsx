@@ -85,6 +85,7 @@ export default async function ShiftRosterPage({
         assignments={assignments}
         employees={employees.filter((e) => e.status === "active")}
         shifts={shifts}
+        dateRange={{ from, to }}
       />
     </AdminShell>
   );

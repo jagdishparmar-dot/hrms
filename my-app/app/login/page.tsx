@@ -2,10 +2,11 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { AuthShell } from "@/components/auth-shell";
 import { LoginForm } from "@/components/login-form";
+import { MobileAppDownloadQr } from "@/components/mobile-app-download-qr";
 import { getCurrentUser, isPlatformAdminEmail } from "@/lib/appwrite/auth";
 import { COMPANY_COOKIE } from "@/lib/appwrite/config";
 import { listMembershipsForUser } from "@/lib/appwrite/tenant";
@@ -57,18 +58,16 @@ export default async function LoginPage() {
         </div>
       }
     >
-      <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+      <div className="space-y-4">
+        <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
         <div className="space-y-3 text-center sm:text-left">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-300">
-            <Sparkles className="size-3.5 text-rose-500 dark:text-rose-400" />
-            Admin sign-in
-          </span>
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Welcome back
+              Sign in
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Sign in with your company admin or employee account to continue.
+              Same email and password your company set up for you — works on the web and
+              the mobile app.
             </p>
           </div>
         </div>
@@ -76,11 +75,9 @@ export default async function LoginPage() {
         <Suspense fallback={<LoginFormFallback />}>
           <LoginForm />
         </Suspense>
+        </div>
 
-        <p className="border-t border-slate-200 pt-4 text-center text-[11px] leading-relaxed text-slate-500 dark:border-slate-800">
-          Protected workspace · Credentials are verified server-side ·{" "}
-          <span className="font-mono">tenant-scoped access</span>
-        </p>
+        <MobileAppDownloadQr />
       </div>
     </AuthShell>
   );

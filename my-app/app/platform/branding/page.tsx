@@ -42,14 +42,14 @@ export default async function PlatformBrandingPage() {
         </PlatformSection>
         <PlatformSection
           title="Platform shell"
-          description="Console chrome uses the shared Design System slate + rose reference."
+          description="Shared layout and components used across the platform console and tenant HR portal."
           icon={Palette}
         >
           <PlatformInfoList
             items={[
-              'Platform console uses Slate 950 canvas with Rose 600 primary actions.',
-              'Tenant HR portal uses Indigo 600 as the HR accent within the same design system.',
-              'Global white-label themes can be layered via env-driven CSS variables without changing tenant data boundaries.',
+              'Platform admins use the console for tenant provisioning, billing, and security.',
+              'Tenant admins use the HR portal for day-to-day workforce operations.',
+              'Per-tenant branding overrides can be applied without changing data isolation boundaries.',
             ]}
           />
         </PlatformSection>

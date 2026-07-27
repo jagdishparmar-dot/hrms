@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  CalendarClock,
   CalendarDays,
   Clock3,
   FileCheck,
@@ -13,6 +14,7 @@ import {
   UserX,
 } from "lucide-react";
 
+import { DashboardAdminQueues } from "@/components/dashboard-admin-queues";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ import {
 import type { DashboardSnapshot } from "@/lib/dashboard";
 import { attendanceStatusClass } from "@/lib/dashboard";
 import { formatAttendanceTime } from "@/lib/attendance-export";
+import { isCompanyAdminRole, type TenantRole } from "@/lib/appwrite/types";
 import { cn, getInitials } from "@/lib/utils";
 
 type TenantInfo = {
@@ -49,6 +52,7 @@ function CompactStat({
   icon: Icon,
   href,
   tone = "indigo",
+  highlight = false,
 }: {
   label: string;
   value: number | string;
@@ -56,6 +60,7 @@ function CompactStat({
   icon: ComponentType<{ className?: string }>;
   href: string;
   tone?: "indigo" | "emerald" | "amber" | "rose" | "sky" | "violet";
+  highlight?: boolean;
 }) {
   const toneClass = {
     indigo:
@@ -73,7 +78,10 @@ function CompactStat({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5 shadow-xs transition-colors hover:bg-accent/30"
+      className={cn(
+        "group flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5 shadow-xs transition-colors hover:bg-accent/30",
+        highlight && "ring-1 ring-amber-300/70 dark:ring-amber-500/30",
+      )}
     >
       <div
         className={cn(
@@ -156,6 +164,7 @@ export function DashboardHome({
   snapshot: DashboardSnapshot;
   tenant: TenantInfo;
 }) {
+  const isAdmin = isCompanyAdminRole(tenant.role as TenantRole);
   const formattedDate = new Date(`${snapshot.today}T12:00:00`).toLocaleDateString(undefined, {
     weekday: "long",
     month: "short",
@@ -165,6 +174,12 @@ export function DashboardHome({
 
   const typeEntries = Object.entries(snapshot.employees.byType).sort((a, b) => b[1] - a[1]);
   const maxType = typeEntries[0]?.[1] || 1;
+
+  const shiftChangesPending = snapshot.adminQueues?.shiftChangesPending ?? 0;
+  const actionBacklog =
+    snapshot.leave.pending +
+    snapshot.regularizationsPending +
+    shiftChangesPending;
 
   return (
     <div className="flex flex-col gap-5">
@@ -186,6 +201,16 @@ export function DashboardHome({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {isAdmin ? (
+              <Button
+                size="sm"
+                className="bg-white text-indigo-900 hover:bg-indigo-50"
+                nativeButton={false}
+                render={<Link href="/attendance" />}
+              >
+                Review attendance
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="secondary"
@@ -204,27 +229,81 @@ export function DashboardHome({
             >
               Attendance
             </Button>
-            <Button
-              size="sm"
-              className="bg-white text-indigo-900 hover:bg-indigo-50"
-              nativeButton={false}
-              render={<Link href="/leave" />}
-            >
-              Leave
-            </Button>
+            {isAdmin ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+                nativeButton={false}
+                render={<Link href="/shifts/roster" />}
+              >
+                Shift roster
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+                nativeButton={false}
+                render={<Link href="/leave" />}
+              >
+                Leave
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
-        <CompactStat
-          label="Active"
-          value={snapshot.employees.active}
-          hint="Headcount"
-          icon={Users}
-          href="/employees"
-          tone="indigo"
+      {isAdmin && snapshot.adminQueues ? (
+        <DashboardAdminQueues
+          queues={snapshot.adminQueues}
+          leavePending={snapshot.leave.pending}
+          leaveItems={snapshot.leave.pendingItems}
         />
+      ) : null}
+
+      {isAdmin ? (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <CompactStat
+            label="Regularize"
+            value={snapshot.regularizationsPending}
+            hint="Pending review"
+            icon={FileCheck}
+            href="/attendance"
+            tone="rose"
+            highlight={snapshot.regularizationsPending > 0}
+          />
+          <CompactStat
+            label="Shift changes"
+            value={shiftChangesPending}
+            hint="Pending review"
+            icon={CalendarClock}
+            href="/shifts/roster"
+            tone="amber"
+            highlight={shiftChangesPending > 0}
+          />
+          <CompactStat
+            label="Leave queue"
+            value={snapshot.leave.pending}
+            hint="Pending approval"
+            icon={CalendarDays}
+            href="/leave"
+            tone="sky"
+            highlight={snapshot.leave.pending > 0}
+          />
+          <CompactStat
+            label="Not marked"
+            value={snapshot.attendance.unmarked}
+            hint="Today"
+            icon={AlertTriangle}
+            href="/attendance"
+            tone="amber"
+            highlight={snapshot.attendance.unmarked > 0}
+          />
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         <CompactStat
           label="Present"
           value={snapshot.attendance.present}
@@ -266,20 +345,12 @@ export function DashboardHome({
           tone="violet"
         />
         <CompactStat
-          label="Leave queue"
-          value={snapshot.leave.pending}
-          hint="Pending"
-          icon={CalendarDays}
-          href="/leave"
-          tone="sky"
-        />
-        <CompactStat
-          label="Regularize"
-          value={snapshot.regularizationsPending}
-          hint="Pending"
-          icon={FileCheck}
-          href="/attendance"
-          tone="amber"
+          label="Active"
+          value={snapshot.employees.active}
+          hint="Headcount"
+          icon={Users}
+          href="/employees"
+          tone="indigo"
         />
       </div>
 
@@ -289,8 +360,8 @@ export function DashboardHome({
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Today&apos;s attendance mix</CardTitle>
               <CardDescription>
-                {snapshot.attendance.marked} of {snapshot.employees.active} employees marked · shift
-                date {snapshot.today}
+                {snapshot.attendance.marked} of {snapshot.employees.active} employees marked ·
+                shift date {snapshot.today}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -298,81 +369,45 @@ export function DashboardHome({
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="shadow-xs">
-              <CardHeader className="border-b pb-3">
-                <CardTitle className="text-base">On duty now</CardTitle>
-                <CardDescription>{snapshot.onDutyNow.length} open punches</CardDescription>
-              </CardHeader>
-              <CardContent className="max-h-64 space-y-2 overflow-y-auto p-3">
-                {snapshot.onDutyNow.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    No one is currently punched in.
-                  </p>
-                ) : (
-                  snapshot.onDutyNow.map((row) => (
-                    <Link
-                      key={`${row.employeeId}-${row.clockInTime}`}
-                      href={`/employees/${row.employeeId}`}
-                      className="flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 transition-colors hover:border-slate-200 hover:bg-muted/40 dark:hover:border-slate-800"
-                    >
-                      <Avatar className="size-8 rounded-lg">
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-[10px] font-semibold text-primary">
-                          {getInitials(row.employeeName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{row.employeeName}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          {row.siteName} · in {row.clockInTime}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px]", attendanceStatusClass(row.status))}
-                      >
-                        {row.status}
-                      </Badge>
-                    </Link>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-xs">
-              <CardHeader className="border-b pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-base">Pending leave</CardTitle>
-                    <CardDescription>Awaiting approval</CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/leave" />}>
-                    View
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="max-h-64 space-y-2 overflow-y-auto p-3">
-                {snapshot.leave.pendingItems.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    No pending leave requests.
-                  </p>
-                ) : (
-                  snapshot.leave.pendingItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border bg-muted/15 px-3 py-2.5"
-                    >
-                      <p className="truncate text-sm font-medium">{item.employeeName}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {item.leaveTypeName} · {item.days}d · {item.fromDate}
-                        {item.toDate !== item.fromDate ? ` → ${item.toDate}` : ""}
+          <Card className="shadow-xs">
+            <CardHeader className="border-b pb-3">
+              <CardTitle className="text-base">On duty now</CardTitle>
+              <CardDescription>{snapshot.onDutyNow.length} open punches</CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-64 space-y-2 overflow-y-auto p-3">
+              {snapshot.onDutyNow.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No one is currently punched in.
+                </p>
+              ) : (
+                snapshot.onDutyNow.map((row) => (
+                  <Link
+                    key={`${row.employeeId}-${row.clockInTime}`}
+                    href={`/employees/${row.employeeId}`}
+                    className="flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 transition-colors hover:border-slate-200 hover:bg-muted/40 dark:hover:border-slate-800"
+                  >
+                    <Avatar className="size-8 rounded-lg">
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-[10px] font-semibold text-primary">
+                        {getInitials(row.employeeName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{row.employeeName}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {row.siteName} · in {row.clockInTime}
                       </p>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px]", attendanceStatusClass(row.status))}
+                    >
+                      {row.status}
+                    </Badge>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="overflow-hidden py-0 shadow-xs">
             <CardHeader className="border-b py-4">
@@ -406,7 +441,7 @@ export function DashboardHome({
                 <TableBody>
                   {snapshot.recent.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell className="pl-4 py-2.5 font-medium">
+                      <TableCell className="py-2.5 pl-4 font-medium">
                         {row.employeeName}
                       </TableCell>
                       <TableCell className="tabular-nums text-muted-foreground">
@@ -448,6 +483,90 @@ export function DashboardHome({
         </div>
 
         <div className="space-y-4 xl:col-span-4">
+          {isAdmin ? (
+            <Card className="shadow-xs">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Needs attention</CardTitle>
+                <CardDescription className="text-xs">
+                  {actionBacklog > 0
+                    ? `${actionBacklog} approval${actionBacklog === 1 ? "" : "s"} in queue`
+                    : "Operational follow-ups for today"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <AttentionRow
+                  label="Pending regularizations"
+                  value={snapshot.regularizationsPending}
+                  href="/attendance"
+                  tone={snapshot.regularizationsPending > 0 ? "rose" : "muted"}
+                />
+                <AttentionRow
+                  label="Pending shift changes"
+                  value={shiftChangesPending}
+                  href="/shifts/roster"
+                  tone={shiftChangesPending > 0 ? "amber" : "muted"}
+                />
+                <AttentionRow
+                  label="Pending leave"
+                  value={snapshot.leave.pending}
+                  href="/leave"
+                  tone={snapshot.leave.pending > 0 ? "sky" : "muted"}
+                />
+                <AttentionRow
+                  label="Unmarked attendance"
+                  value={snapshot.attendance.unmarked}
+                  href="/attendance"
+                  tone={snapshot.attendance.unmarked > 0 ? "amber" : "muted"}
+                />
+                <AttentionRow
+                  label="Late arrivals"
+                  value={snapshot.attendance.late}
+                  href="/attendance"
+                  tone={snapshot.attendance.late > 0 ? "amber" : "muted"}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-xs">
+              <CardHeader className="border-b pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">Pending leave</CardTitle>
+                    <CardDescription>Awaiting approval</CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href="/leave" />}
+                  >
+                    View
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="max-h-64 space-y-2 overflow-y-auto p-3">
+                {snapshot.leave.pendingItems.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No pending leave requests.
+                  </p>
+                ) : (
+                  snapshot.leave.pendingItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-lg border bg-muted/15 px-3 py-2.5"
+                    >
+                      <p className="truncate text-sm font-medium">{item.employeeName}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.leaveTypeName} · {item.days}d · {item.fromDate}
+                        {item.toDate !== item.fromDate ? ` → ${item.toDate}` : ""}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="shadow-xs">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Workforce</CardTitle>
@@ -468,7 +587,7 @@ export function DashboardHome({
                     <div key={type} className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span>{type}</span>
-                        <span className="tabular-nums font-medium">{count}</span>
+                        <span className="font-medium tabular-nums">{count}</span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                         <div
@@ -486,7 +605,9 @@ export function DashboardHome({
           <Card className="shadow-xs">
             <CardHeader className="border-b pb-3">
               <CardTitle className="text-base">On leave today</CardTitle>
-              <CardDescription>{snapshot.leave.onLeaveTodayItems.length} approved</CardDescription>
+              <CardDescription>
+                {snapshot.leave.onLeaveTodayItems.length} approved
+              </CardDescription>
             </CardHeader>
             <CardContent className="max-h-56 space-y-2 overflow-y-auto p-3">
               {snapshot.leave.onLeaveTodayItems.length === 0 ? (
@@ -509,38 +630,6 @@ export function DashboardHome({
                   </div>
                 ))
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-xs">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Needs attention</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <AttentionRow
-                label="Unmarked attendance"
-                value={snapshot.attendance.unmarked}
-                href="/attendance"
-                tone={snapshot.attendance.unmarked > 0 ? "amber" : "muted"}
-              />
-              <AttentionRow
-                label="Late arrivals"
-                value={snapshot.attendance.late}
-                href="/attendance"
-                tone={snapshot.attendance.late > 0 ? "amber" : "muted"}
-              />
-              <AttentionRow
-                label="Pending regularizations"
-                value={snapshot.regularizationsPending}
-                href="/attendance"
-                tone={snapshot.regularizationsPending > 0 ? "rose" : "muted"}
-              />
-              <AttentionRow
-                label="Inactive employees"
-                value={snapshot.employees.inactive}
-                href="/employees"
-                tone="muted"
-              />
             </CardContent>
           </Card>
         </div>
@@ -567,14 +656,16 @@ function AttentionRow({
   label: string;
   value: number;
   href: string;
-  tone: "amber" | "rose" | "muted";
+  tone: "amber" | "rose" | "sky" | "muted";
 }) {
   const valueClass =
     tone === "amber"
       ? "text-amber-700 dark:text-amber-300"
       : tone === "rose"
         ? "text-rose-700 dark:text-rose-300"
-        : "text-muted-foreground";
+        : tone === "sky"
+          ? "text-sky-700 dark:text-sky-300"
+          : "text-muted-foreground";
 
   return (
     <Link

@@ -118,6 +118,7 @@ import type {
   EmployeeShiftAssignment,
   ShiftChangeRequest,
 } from '@/lib/appwrite/types';
+import { isCompanyAdminRole } from '@/lib/appwrite/types';
 import {
   addDaysIso,
   dateIsoInTimeZone,
@@ -1246,6 +1247,28 @@ async function databasesGetShift(companyId: string, shiftId: string) {
   }
 }
 
+async function databasesGetShiftByCode(companyId: string, code: string) {
+  const { databases } = createAdminClient();
+  const result = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.shiftsCollectionId,
+    [
+      Query.equal('companyId', companyId),
+      Query.equal('code', code),
+      Query.equal('status', 'active'),
+      Query.limit(1),
+    ],
+  );
+  if (result.documents.length === 0) return null;
+  return mapWorkShift(result.documents[0] as unknown as Record<string, unknown>);
+}
+
+async function resolveShiftPatternToken(companyId: string, token: string) {
+  const byId = await databasesGetShift(companyId, token);
+  if (byId) return byId;
+  return databasesGetShiftByCode(companyId, token);
+}
+
 export async function deleteShiftAssignmentAction(formData: FormData) {
   const ctx = await requireCompanyAdmin();
   const assignmentId = String(formData.get('assignmentId') || '');
@@ -1293,7 +1316,7 @@ export async function generateRotationalRosterAction(formData: FormData) {
     .map((part) => part.trim())
     .filter(Boolean);
   if (tokens.length === 0) {
-    return { ok: false as const, error: 'Pattern must include at least one shift id or OFF.' };
+    return { ok: false as const, error: 'Pattern must include at least one shift code or OFF.' };
   }
 
   const { databases } = createAdminClient();
@@ -1302,11 +1325,11 @@ export async function generateRotationalRosterAction(formData: FormData) {
     const dateIso = addDaysIso(data.startDate, i);
     const token = tokens[i % tokens.length]!;
     if (token.toUpperCase() === 'OFF') continue;
-    const shift = await databasesGetShift(ctx.company.id, token);
+    const shift = await resolveShiftPatternToken(ctx.company.id, token);
     if (!shift) {
       return {
         ok: false as const,
-        error: `Unknown shift id in pattern: ${token}`,
+        error: `Unknown shift in pattern: ${token}`,
       };
     }
     await databases.createDocument(
@@ -2181,6 +2204,7 @@ export async function exportAttendanceRegisterCsvAction(filters: AttendanceRegis
 
 export async function getDashboardStatsAction(): Promise<DashboardSnapshot> {
   const ctx = await requireTenantMember();
+  const isAdmin = isCompanyAdminRole(ctx.membership.role);
   const { databases } = createAdminClient();
   const tz = ctx.company.settings.timezone || 'Asia/Kolkata';
   const { dateIso: today } = dateIsoInTimeZone(Date.now(), tz);
@@ -2272,7 +2296,8 @@ export async function getDashboardStatsAction(): Promise<DashboardSnapshot> {
       [
         Query.equal('companyId', ctx.company.id),
         Query.equal('status', 'pending'),
-        Query.limit(1),
+        Query.orderDesc('$createdAt'),
+        Query.limit(isAdmin ? 6 : 1),
       ],
     ),
   ]);
@@ -2362,6 +2387,53 @@ export async function getDashboardStatsAction(): Promise<DashboardSnapshot> {
 
   const active = activeEmpCount.total;
 
+  let adminQueues: DashboardSnapshot['adminQueues'] = null;
+  if (isAdmin) {
+    const regularizationItems = pendingRegDocs.documents.map((d) => {
+      const row = mapRegularization(d as unknown as Record<string, unknown>);
+      return {
+        id: row.id,
+        employeeName: byId.get(row.employeeId)?.name || 'Employee',
+        dateIso: row.dateIso,
+        requestedClockIn: row.requestedClockIn,
+        requestedClockOut: row.requestedClockOut,
+        requestedOutDateIso: row.requestedOutDateIso,
+        reason: row.reason,
+      };
+    });
+
+    const shiftRows = await listPendingShiftChangeRequests(ctx.company.id);
+    const shifts = await listShiftsAction();
+    const enrichedShifts = await enrichShiftChangeRequests(
+      ctx.company.id,
+      shiftRows.slice(0, 6),
+      empDocs.documents.map((d) => {
+        const e = mapEmployee(d as unknown as Record<string, unknown>);
+        return { id: e.id, name: e.name };
+      }),
+      shifts,
+    );
+
+    adminQueues = {
+      regularizationsPending: pendingRegDocs.total,
+      regularizationItems,
+      shiftChangesPending: shiftRows.length,
+      shiftChangeItems: enrichedShifts.map((row) => ({
+        id: row.id,
+        employeeName: row.employeeName || row.employeeId,
+        dateIso: row.dateIso,
+        sequence: row.sequence,
+        currentShiftLabel: row.currentShiftName
+          ? `${row.currentShiftName}${row.currentShiftCode ? ` (${row.currentShiftCode})` : ''}`
+          : 'Default / unassigned',
+        requestedShiftLabel: row.requestedShiftName
+          ? `${row.requestedShiftName}${row.requestedShiftCode ? ` (${row.requestedShiftCode})` : ''}`
+          : row.requestedShiftId,
+        reason: row.reason,
+      })),
+    };
+  }
+
   return {
     today,
     employees: {
@@ -2387,6 +2459,7 @@ export async function getDashboardStatsAction(): Promise<DashboardSnapshot> {
       onLeaveTodayItems,
     },
     regularizationsPending: pendingRegDocs.total,
+    adminQueues,
     onDutyNow,
     recent,
   };

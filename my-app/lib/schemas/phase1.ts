@@ -184,7 +184,7 @@ export const generateRosterSchema = z.object({
   employeeId: z.string().min(1),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   days: z.coerce.number().min(1).max(62).default(7),
-  /** Comma-separated shift IDs; use OFF for weekly off days in the cycle. */
+  /** Comma-separated shift codes (or IDs); use OFF for weekly off days in the cycle. */
   pattern: z.string().trim().min(1).max(1024),
 });
 

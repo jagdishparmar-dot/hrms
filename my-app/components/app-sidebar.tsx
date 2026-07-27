@@ -16,13 +16,13 @@ import {
   Settings2Icon,
   SettingsIcon,
   ShieldIcon,
-  Sparkles,
   UsersIcon,
   WalletIcon,
 } from 'lucide-react';
 
 import { NavMain, type NavMainItem } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { SidebarBrand } from '@/components/sidebar-brand';
 import { TeamSwitcher } from '@/components/team-switcher';
 import {
   Sidebar,
@@ -38,6 +38,7 @@ export type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
     name: string;
     plan: string;
     slug?: string;
+    logoUrl?: string;
   };
   user: {
     name: string;
@@ -200,7 +201,10 @@ export function AppSidebar({
       {...props}
     >
       <SidebarHeader className="border-b border-sidebar-border p-3">
-        <TeamSwitcher company={company} mode={mode} />
+        <div className="flex flex-col gap-3">
+          <SidebarBrand company={company} mode={mode} />
+          <TeamSwitcher company={company} mode={mode} />
+        </div>
       </SidebarHeader>
       <SidebarContent className="px-2 py-3">
         <NavMain
@@ -210,24 +214,6 @@ export function AppSidebar({
         />
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <div className="mb-2 hidden px-2 group-data-[collapsible=icon]:hidden md:block">
-          <div
-            className={cn(
-              'flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-mono text-muted-foreground',
-              isPlatform
-                ? 'border-rose-500/20 bg-rose-500/5'
-                : 'border-indigo-500/20 bg-indigo-500/5',
-            )}
-          >
-            <Sparkles
-              className={cn(
-                'size-3 shrink-0',
-                isPlatform ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400',
-              )}
-            />
-            <span>Slate canvas · {isPlatform ? 'Rose' : 'Indigo'} accent</span>
-          </div>
-        </div>
         <NavUser
           user={user}
           showPlatform={showPlatform || mode === 'platform'}

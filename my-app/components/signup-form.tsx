@@ -6,8 +6,6 @@ import { useState, useTransition } from 'react';
 
 import { FormError, FormField } from '@/components/form-fields';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { signupAction } from '@/lib/appwrite/actions';
 
 export function SignupForm() {
@@ -44,20 +42,6 @@ export function SignupForm() {
         minLength={2}
         placeholder="Acme Logistics"
       />
-      <div className="grid gap-2">
-        <Label htmlFor="slug">Subdomain slug</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="slug"
-            name="slug"
-            required
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            placeholder="acme"
-            className="flex-1"
-          />
-          <span className="shrink-0 text-xs text-muted-foreground">.localhost</span>
-        </div>
-      </div>
       <FormField name="name" label="Your name" required minLength={2} placeholder="Priya Sharma" />
       <FormField
         name="email"

@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
-import { Building2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { CompanyLogo } from "@/components/company-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,6 +36,7 @@ export async function AdminShell({
     name: "Platform",
     plan: "console",
     slug: undefined as string | undefined,
+    logoUrl: undefined as string | undefined,
   };
   let user = { name: "Admin", email: "", role: "platform_admin" };
   let isAdmin = true;
@@ -53,6 +55,7 @@ export async function AdminShell({
         name: ctx.company.name,
         plan: ctx.company.plan,
         slug: ctx.company.slug,
+        logoUrl: ctx.company.branding.logoUrl,
       };
       isAdmin = isCompanyAdminRole(ctx.membership.role);
     }
@@ -65,6 +68,7 @@ export async function AdminShell({
       name: ctx.company.name,
       plan: ctx.company.plan,
       slug: ctx.company.slug,
+      logoUrl: ctx.company.branding.logoUrl,
     };
     user = {
       name: ctx.user.name || ctx.membership.name || ctx.user.email || "User",
@@ -114,16 +118,17 @@ export async function AdminShell({
                 className="mx-1 hidden h-5 sm:block"
               />
               <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className={cn(
-                    "hidden size-9 shrink-0 items-center justify-center rounded-xl border sm:flex",
+                <CompanyLogo
+                  logoUrl={company.logoUrl}
+                  alt={`${company.name} logo`}
+                  className="hidden size-9 sm:flex"
+                  fallbackClassName={cn(
+                    "hidden size-9 sm:flex",
                     isPlatform
                       ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
                       : "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
                   )}
-                >
-                  <Building2 className="size-4" />
-                </div>
+                />
                 <div className="min-w-0 space-y-0.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="truncate text-sm font-bold tracking-tight text-foreground sm:text-base">

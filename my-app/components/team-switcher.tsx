@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import * as React from 'react';
 
+import { CompanyLogo } from '@/components/company-logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +30,26 @@ export function TeamSwitcher({
     name: string;
     plan: string;
     slug?: string;
+    logoUrl?: string;
   };
   mode?: 'tenant' | 'platform';
 }) {
   const { isMobile } = useSidebar();
   const isPlatform = mode === 'platform';
+
+  const logoFallbackClass = cn(
+    'aspect-square size-8',
+    isPlatform
+      ? 'border-rose-500/30 bg-gradient-to-br from-rose-500/20 to-indigo-500/10 text-rose-400'
+      : 'border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 to-sky-500/10 text-indigo-400',
+  );
+
+  const menuLogoFallbackClass = cn(
+    'size-6',
+    isPlatform
+      ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+      : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400',
+  );
 
   return (
     <SidebarMenu>
@@ -47,17 +63,14 @@ export function TeamSwitcher({
               />
             }
           >
-            <div
-              className={cn(
-                'flex aspect-square size-8 items-center justify-center rounded-xl border shadow-sm',
-                isPlatform
-                  ? 'border-rose-500/30 bg-gradient-to-br from-rose-500/20 to-indigo-500/10 text-rose-400'
-                  : 'border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 to-sky-500/10 text-indigo-400',
-              )}
-            >
-              <Building2Icon className="size-4" />
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <CompanyLogo
+              logoUrl={company.logoUrl}
+              alt={`${company.name} logo`}
+              className="hidden aspect-square size-8 group-data-[collapsible=icon]:flex"
+              fallbackClassName={logoFallbackClass}
+              iconClassName="size-4"
+            />
+            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate font-semibold text-sidebar-foreground">
                 {company.name}
               </span>
@@ -65,7 +78,7 @@ export function TeamSwitcher({
                 {isPlatform ? 'platform · console' : company.plan}
               </span>
             </div>
-            <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground" />
+            <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-56 rounded-xl border-border bg-popover"
@@ -78,16 +91,13 @@ export function TeamSwitcher({
                 Current workspace
               </DropdownMenuLabel>
               <DropdownMenuItem disabled className="gap-2 p-2">
-                <div
-                  className={cn(
-                    'flex size-6 items-center justify-center rounded-lg border',
-                    isPlatform
-                      ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
-                      : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400',
-                  )}
-                >
-                  <Building2Icon className="size-3.5" />
-                </div>
+                <CompanyLogo
+                  logoUrl={company.logoUrl}
+                  alt={`${company.name} logo`}
+                  className="size-6"
+                  fallbackClassName={menuLogoFallbackClass}
+                  iconClassName="size-3.5"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{company.name}</span>
                   <span className="truncate text-xs text-muted-foreground">

@@ -2,7 +2,6 @@ import {
   Building2,
   Clock,
   Shield,
-  Sparkles,
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -31,22 +30,22 @@ export function AuthShell({
                 <Building2 className="size-5" />
               </div>
               <div>
-                <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
-                  HRMS Portal
-                </span>
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                   CheckIn
                 </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  HR for teams on the ground
+                </p>
               </div>
             </div>
 
             <div className="space-y-3">
               <h2 className="max-w-md text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                Workforce management, unified.
+                Who&apos;s in, who&apos;s off, who&apos;s late — without chasing spreadsheets.
               </h2>
               <p className="max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                Manage employees, geofenced attendance, leave approvals, and
-                payroll from one secure admin portal.
+                This is where admins set up people, shifts, and leave. Staff punch in from
+                the phone app; you review everything here.
               </p>
             </div>
 
@@ -54,20 +53,20 @@ export function AuthShell({
               {[
                 {
                   icon: Users,
-                  title: "People directory",
-                  desc: "Onboard, organize, and manage employee profiles.",
+                  title: "People",
+                  desc: "Onboard someone, update their details, reset a login when they forget.",
                   tone: "indigo" as const,
                 },
                 {
                   icon: Clock,
-                  title: "Attendance & shifts",
-                  desc: "Geofenced punch-ins, rosters, and monthly registers.",
+                  title: "Attendance",
+                  desc: "Daily punches, shift roster, monthly register — export when payroll asks.",
                   tone: "emerald" as const,
                 },
                 {
                   icon: Shield,
-                  title: "Enterprise security",
-                  desc: "Multi-tenant isolation with role-based access.",
+                  title: "Roles",
+                  desc: "Admins manage the company. Everyone else gets just their leave and profile.",
                   tone: "rose" as const,
                 },
               ].map((item) => (
@@ -100,12 +99,9 @@ export function AuthShell({
           </div>
 
           <div className="relative z-10 border-t border-slate-200 p-10 dark:border-slate-800/80">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Sparkles className="size-3.5 text-rose-500 dark:text-rose-400" />
-              <span className="font-mono">
-                Light / dark · Indigo HR · Rose actions
-              </span>
-            </div>
+            <p className="text-xs text-slate-500">
+              Questions? Ask your company admin — they manage access from here.
+            </p>
           </div>
         </div>
 
@@ -118,8 +114,8 @@ export function AuthShell({
               <div className="text-sm font-bold text-slate-900 dark:text-white">
                 CheckIn
               </div>
-              <div className="text-[10px] font-mono text-slate-500">
-                HR Management Portal
+              <div className="text-[10px] text-slate-500">
+                Sign in to your company
               </div>
             </div>
           </div>
@@ -140,7 +136,7 @@ export function AuthShell({
 
           <div className="flex w-full justify-between px-6 pb-5 text-xs text-slate-500 sm:px-10">
             <span>© {new Date().getFullYear()} CheckIn</span>
-            <span className="hidden font-mono sm:inline">v1.0 · Secure sign-in</span>
+            <span className="hidden sm:inline">Need help? Talk to your admin.</span>
           </div>
         </div>
       </div>
