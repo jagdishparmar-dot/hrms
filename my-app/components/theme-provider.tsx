@@ -11,6 +11,7 @@ import {
 
 import {
   applyThemeMode,
+  DEFAULT_THEME_MODE,
   persistTheme,
   readStoredTheme,
   type ThemeMode,
@@ -26,7 +27,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({
   children,
-  defaultTheme = "dark",
+  defaultTheme = DEFAULT_THEME_MODE,
 }: {
   children: React.ReactNode;
   defaultTheme?: ThemeMode;

@@ -207,20 +207,20 @@ export function SitesDirectory({
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-slate-950 via-indigo-950/80 to-slate-900 p-5 text-white shadow-lg sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-indigo-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 left-1/3 size-56 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-indigo-50 via-background to-emerald-50/70 p-5 text-foreground shadow-sm sm:p-6 dark:from-slate-950 dark:via-indigo-950/80 dark:to-slate-900 dark:text-white dark:shadow-lg">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-indigo-400/15 blur-3xl dark:bg-indigo-500/20" />
+        <div className="pointer-events-none absolute -bottom-20 left-1/3 size-56 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-500/10" />
 
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-indigo-200/80">
-              <Signal className="size-3.5 text-emerald-400" />
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-indigo-700/80 dark:text-indigo-200/80">
+              <Signal className="size-3.5 text-emerald-600 dark:text-emerald-400" />
               Site command center
             </div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Live workforce map
             </h2>
-            <p className="max-w-xl text-sm text-slate-300/90">
+            <p className="max-w-xl text-sm text-muted-foreground dark:text-slate-300/90">
               Track who is on duty at each geofence in real time. Select a site to
               filter the roster and highlight connections on the map.
             </p>
@@ -235,9 +235,9 @@ export function SitesDirectory({
             <MetricPill label="Sites" value={activeSites.length} accent="indigo" />
             <MetricPill label="Field" value={live.fieldCount} accent="sky" />
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
-              className="border-white/10 bg-white/10 text-white hover:bg-white/15"
+              className="bg-background/80 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
               disabled={refreshing}
               onClick={() => void refreshLive()}
             >
@@ -251,7 +251,7 @@ export function SitesDirectory({
           </div>
         </div>
 
-        <p className="relative mt-4 text-xs text-slate-400">
+        <p className="relative mt-4 text-xs text-muted-foreground dark:text-slate-400">
           Auto-refresh every 30s · Last update {lastUpdated}
         </p>
       </div>
@@ -263,6 +263,7 @@ export function SitesDirectory({
             checkedIn={live.checkedIn}
             selectedSiteId={selectedSiteId}
             highlightedEmployeeId={highlightId}
+            onSiteSelect={(siteId) => selectSite(siteId)}
           />
 
           {selectedSite ? (
@@ -656,10 +657,10 @@ function MetricPill({
 }) {
   const tone =
     accent === "emerald"
-      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100"
       : accent === "sky"
-        ? "border-sky-400/20 bg-sky-400/10 text-sky-100"
-        : "border-indigo-400/20 bg-indigo-400/10 text-indigo-100";
+        ? "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-100"
+        : "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-100";
 
   return (
     <div className={cn("rounded-xl border px-3 py-2 text-center", tone)}>

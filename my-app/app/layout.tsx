@@ -5,7 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { rootMetadata } from "@/lib/site-metadata";
-import { parseThemeMode, THEME_STORAGE_KEY, type ThemeMode } from "@/lib/theme";
+import { parseThemeMode, DEFAULT_THEME_MODE, THEME_STORAGE_KEY, type ThemeMode } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -28,7 +28,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const theme: ThemeMode = parseThemeMode(cookieStore.get(THEME_STORAGE_KEY)?.value) ?? "dark";
+  const theme: ThemeMode =
+    parseThemeMode(cookieStore.get(THEME_STORAGE_KEY)?.value) ?? DEFAULT_THEME_MODE;
 
   return (
     <html

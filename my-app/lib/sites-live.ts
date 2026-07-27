@@ -84,6 +84,42 @@ export function buildMapPoints(
   return points;
 }
 
+/** Lat/lng bounds with padding for Leaflet fitBounds. */
+export function computeMapBounds(points: MapPoint[], paddingRatio = 0.18) {
+  if (points.length === 0) return null;
+
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.long);
+  let minLat = Math.min(...lats);
+  let maxLat = Math.max(...lats);
+  let minLng = Math.min(...lngs);
+  let maxLng = Math.max(...lngs);
+
+  if (points.length === 1) {
+    const pad = 0.008;
+    return {
+      southWest: [minLat - pad, minLng - pad] as [number, number],
+      northEast: [maxLat + pad, maxLng + pad] as [number, number],
+    };
+  }
+
+  const latSpan = Math.max(maxLat - minLat, 0.004);
+  const lngSpan = Math.max(maxLng - minLng, 0.004);
+  const latPad = latSpan * paddingRatio;
+  const lngPad = lngSpan * paddingRatio;
+
+  return {
+    southWest: [minLat - latPad, minLng - lngPad] as [number, number],
+    northEast: [maxLat + latPad, maxLng + lngPad] as [number, number],
+  };
+}
+
+export function employeeMarkerColor(status?: GeofenceStatus) {
+  if (status === "GPS_ONLY") return "#38bdf8";
+  if (status === "OUTSIDE") return "#fbbf24";
+  return "#34d399";
+}
+
 export function projectMapPoints(
   points: MapPoint[],
   width: number,

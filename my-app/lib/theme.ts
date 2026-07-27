@@ -1,5 +1,6 @@
 export type ThemeMode = "light" | "dark";
 
+export const DEFAULT_THEME_MODE: ThemeMode = "light";
 export const THEME_STORAGE_KEY = "checkin-theme";
 
 export function parseThemeMode(value: string | null | undefined): ThemeMode | null {

@@ -183,20 +183,20 @@ export function DashboardHome({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-indigo-600/90 via-indigo-700 to-slate-900 px-5 py-5 text-white shadow-lg sm:px-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-indigo-50 via-background to-sky-50/70 px-5 py-5 text-foreground shadow-sm sm:px-6 dark:from-indigo-600/90 dark:via-indigo-700 dark:to-slate-900 dark:text-white dark:shadow-lg">
+        <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-indigo-400/15 blur-2xl dark:bg-white/10" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-indigo-200/90">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-indigo-700/80 dark:text-indigo-200/90">
               {tenant.companyName}
             </p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
               Good day, {tenant.userName.split(" ")[0]}
             </h2>
-            <p className="mt-1 flex items-center gap-2 text-sm text-indigo-100/90">
+            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground dark:text-indigo-100/90">
               <CalendarDays className="size-4" />
               {formattedDate}
-              <span className="text-indigo-300/80">·</span>
+              <span className="text-border dark:text-indigo-300/80">·</span>
               <span className="capitalize">{tenant.role.replaceAll("_", " ")}</span>
             </p>
           </div>
@@ -204,7 +204,7 @@ export function DashboardHome({
             {isAdmin ? (
               <Button
                 size="sm"
-                className="bg-white text-indigo-900 hover:bg-indigo-50"
+                className="dark:bg-white dark:text-indigo-900 dark:hover:bg-indigo-50"
                 nativeButton={false}
                 render={<Link href="/attendance" />}
               >
@@ -213,8 +213,8 @@ export function DashboardHome({
             ) : null}
             <Button
               size="sm"
-              variant="secondary"
-              className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+              variant="outline"
+              className="bg-background/80 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               nativeButton={false}
               render={<Link href="/employees" />}
             >
@@ -222,8 +222,8 @@ export function DashboardHome({
             </Button>
             <Button
               size="sm"
-              variant="secondary"
-              className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+              variant="outline"
+              className="bg-background/80 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               nativeButton={false}
               render={<Link href="/attendance" />}
             >
@@ -232,8 +232,8 @@ export function DashboardHome({
             {isAdmin ? (
               <Button
                 size="sm"
-                variant="secondary"
-                className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+                variant="outline"
+                className="bg-background/80 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                 nativeButton={false}
                 render={<Link href="/shifts/roster" />}
               >
@@ -242,8 +242,8 @@ export function DashboardHome({
             ) : (
               <Button
                 size="sm"
-                variant="secondary"
-                className="border-white/10 bg-white/10 text-white hover:bg-white/20"
+                variant="outline"
+                className="bg-background/80 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                 nativeButton={false}
                 render={<Link href="/leave" />}
               >
