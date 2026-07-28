@@ -15,9 +15,11 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#312E81",
     "ios": {
+      "bundleIdentifier": "com.ayersh009.checkinmobile",
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "CheckIn uses your location to verify you are within the office geofence when clocking in."
+        "NSLocationWhenInUseUsageDescription": "CheckIn uses your location to verify you are within the office geofence when clocking in.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

@@ -29,6 +29,23 @@
         "EXPO_PUBLIC_APPWRITE_PLATFORM": "com.ayersh009.checkinmobile"
       }
     },
+    "testflight": {
+      "distribution": "store",
+      "channel": "preview",
+      "environment": "preview",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_HR_API_BASE_URL": "https://hrms.intoship.cloud",
+        "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://appwrite.intoship.cloud/v1",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "6a620077001e71c1acde",
+        "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "Attendance",
+        "EXPO_PUBLIC_APPWRITE_DATABASE_ID": "hr_portal",
+        "EXPO_PUBLIC_APPWRITE_EMPLOYEES_COLLECTION_ID": "employees",
+        "EXPO_PUBLIC_APPWRITE_ATTENDANCE_COLLECTION_ID": "attendance_records",
+        "EXPO_PUBLIC_APPWRITE_SITES_COLLECTION_ID": "sites",
+        "EXPO_PUBLIC_APPWRITE_PLATFORM": "com.ayersh009.checkinmobile"
+      }
+    },
     "production": {
       "channel": "production",
       "autoIncrement": true,
@@ -49,10 +66,14 @@
     }
   },
   "submit": {
+    "testflight": {
+      "ios": {}
+    },
     "production": {
       "android": {
         "track": "internal"
-      }
+      },
+      "ios": {}
     }
   }
 }
