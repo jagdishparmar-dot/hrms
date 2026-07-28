@@ -63,7 +63,7 @@ export function LeaveApplyForm({ types }: { types: LeaveType[] }) {
       <FormTextarea name="note" label="Note (optional)" placeholder="Optional note" />
       <FormError message={error} />
       <FormSuccess message={ok ? 'Leave request submitted.' : null} />
-      <Button type="submit" disabled={pending || types.length === 0}>
+      <Button type="submit" disabled={pending || types.length === 0} className="h-11 w-full rounded-xl">
         {pending ? 'Submitting…' : 'Apply'}
       </Button>
     </form>

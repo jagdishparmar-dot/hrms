@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { getCurrentUser, isPlatformAdminEmail } from '@/lib/appwrite/auth';
+import { getCurrentUser, getCurrentTenantContext, isPlatformAdminEmail } from '@/lib/appwrite/auth';
+import { tenantHomePath } from '@/lib/appwrite/routing';
 import { listMembershipsForUser } from '@/lib/appwrite/tenant';
 import { pageMetadata } from '@/lib/site-metadata';
 
@@ -17,6 +18,11 @@ export default async function HomePage() {
   if (isPlatformAdminEmail(user.email || '')) {
     const memberships = await listMembershipsForUser(user.$id);
     if (memberships.length === 0) redirect('/platform');
+  }
+
+  const ctx = await getCurrentTenantContext();
+  if (ctx) {
+    redirect(tenantHomePath(ctx.membership.role));
   }
 
   redirect('/dashboard');

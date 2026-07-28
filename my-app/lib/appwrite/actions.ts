@@ -12,6 +12,7 @@ import {
   requirePlatformAdmin,
   requireTenantMember,
 } from '@/lib/appwrite/auth';
+import { tenantHomePath } from '@/lib/appwrite/routing';
 import {
   COMPANY_COOKIE,
   SESSION_COOKIE,
@@ -25,6 +26,7 @@ import {
   listMembershipsForUser,
 } from '@/lib/appwrite/tenant';
 import type { Company } from '@/lib/appwrite/types';
+import { isCompanyAdminRole } from '@/lib/appwrite/types';
 import {
   DEFAULT_FEATURE_FLAGS,
 } from '@/lib/appwrite/types';
@@ -220,6 +222,13 @@ export async function loginAction(formData: FormData) {
       if (platform && safeNext.startsWith('/platform')) {
         redirect('/platform');
       }
+      const home = tenantHomePath(selected.role);
+      if (
+        (safeNext === '/dashboard' || safeNext === '/') &&
+        !isCompanyAdminRole(selected.role)
+      ) {
+        redirect(home);
+      }
       redirect(safeNext);
     }
 
@@ -254,7 +263,7 @@ export async function selectCompanyAction(formData: FormData) {
   }
 
   await setCompanyCookie(membership.companyId);
-  redirect('/dashboard');
+  redirect(tenantHomePath(membership.role));
 }
 
 export async function logoutAction() {

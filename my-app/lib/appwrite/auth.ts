@@ -109,7 +109,7 @@ export async function requireTenantMember(options?: { allowPasswordChange?: bool
 export async function requireCompanyAdmin() {
   const ctx = await requireTenantMember();
   if (!isCompanyAdminRole(ctx.membership.role)) {
-    redirect('/dashboard');
+    redirect('/me');
   }
   return ctx;
 }

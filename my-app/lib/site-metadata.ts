@@ -56,6 +56,11 @@ export const rootMetadata: Metadata = {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CheckIn",
+  },
 };
 
 type PageMetadataOptions = {

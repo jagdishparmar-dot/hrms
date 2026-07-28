@@ -1,4 +1,6 @@
 import { AdminShell } from "@/components/admin-shell";
+import { EmployeeLeaveView } from "@/components/employee-leave-view";
+import { EmployeeShell } from "@/components/employee-shell";
 import {
   LeaveAdminForms,
   LeaveApplyForm,
@@ -55,6 +57,20 @@ export default async function LeavePage() {
     ]);
   const employees = employeesResult.employees;
 
+  if (!isAdmin) {
+    return (
+      <EmployeeShell>
+        <div className="mb-4 hidden md:block">
+          <h2 className="text-2xl font-bold tracking-tight">Leave</h2>
+          <p className="text-sm text-muted-foreground">
+            Check balances, apply for time off, and view holidays.
+          </p>
+        </div>
+        <EmployeeLeaveView balances={balances} types={types} holidays={holidays} />
+      </EmployeeShell>
+    );
+  }
+
   return (
     <AdminShell title="Leave" subtitle="Balances, applications, and holidays">
       <PageHeader
@@ -62,110 +78,65 @@ export default async function LeavePage() {
         description="Check balances, apply for time off, and manage approvals."
       />
 
-      {isAdmin ? (
-        <Tabs defaultValue="mine" className="flex flex-col gap-4">
-          <TabsList variant="line">
-            <TabsTrigger value="mine">My leave</TabsTrigger>
-            <TabsTrigger value="approvals">
-              Approvals{requests.length ? ` (${requests.length})` : ""}
-            </TabsTrigger>
-            <TabsTrigger value="config">Configure</TabsTrigger>
-            <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="mine" className="flex flex-col gap-4">
+        <TabsList variant="line">
+          <TabsTrigger value="mine">My leave</TabsTrigger>
+          <TabsTrigger value="approvals">
+            Approvals{requests.length ? ` (${requests.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="config">Configure</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="mine" className="flex flex-col gap-4">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <BalancesCard balances={balances} types={types} />
-              <ApplyCard types={types} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="approvals" className="flex flex-col gap-4">
-            <Card className="shadow-xs">
-              <CardHeader>
-                <CardTitle>Pending approvals</CardTitle>
-                <CardDescription>Review and act on leave requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LeaveReviewList items={requests} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="config" className="flex flex-col gap-4">
-            <Card className="shadow-xs">
-              <CardHeader>
-                <CardTitle>Configure leave & holidays</CardTitle>
-                <CardDescription>Leave types and company holidays</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LeaveAdminForms types={types} holidays={holidays} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="assignments" className="flex flex-col gap-4">
-            <Card className="shadow-xs">
-              <CardHeader>
-                <CardTitle>Leave assignments</CardTitle>
-                <CardDescription>
-                  Allocate and manage employee leave balances for {currentYear}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LeaveAssignmentForm
-                  employees={employees}
-                  types={types}
-                  assignments={assignments}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
+        <TabsContent value="mine" className="flex flex-col gap-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             <BalancesCard balances={balances} types={types} />
             <ApplyCard types={types} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="approvals" className="flex flex-col gap-4">
           <Card className="shadow-xs">
             <CardHeader>
-              <CardTitle>Holidays</CardTitle>
-              <CardDescription>Company holiday calendar</CardDescription>
+              <CardTitle>Pending approvals</CardTitle>
+              <CardDescription>Review and act on leave requests</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {holidays.map((h) => (
-                    <TableRow key={h.id}>
-                      <TableCell className="font-medium">{h.name}</TableCell>
-                      <TableCell className="tabular-nums text-muted-foreground">
-                        {h.date}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {holidays.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={2}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        No holidays listed.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+            <CardContent>
+              <LeaveReviewList items={requests} />
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+
+        <TabsContent value="config" className="flex flex-col gap-4">
+          <Card className="shadow-xs">
+            <CardHeader>
+              <CardTitle>Configure leave & holidays</CardTitle>
+              <CardDescription>Leave types and company holidays</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LeaveAdminForms types={types} holidays={holidays} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignments" className="flex flex-col gap-4">
+          <Card className="shadow-xs">
+            <CardHeader>
+              <CardTitle>Leave assignments</CardTitle>
+              <CardDescription>
+                Allocate and manage employee leave balances for {currentYear}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LeaveAssignmentForm
+                employees={employees}
+                types={types}
+                assignments={assignments}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </AdminShell>
   );
 }

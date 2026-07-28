@@ -45,6 +45,7 @@ export function middleware(request: NextRequest) {
   const isPlatform = pathname.startsWith('/platform');
   const isTenantApp =
     pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/me') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||
     pathname.startsWith('/sites') ||
@@ -81,6 +82,8 @@ export const config = {
     '/select-company',
     '/change-password',
     '/dashboard/:path*',
+    '/me',
+    '/me/:path*',
     '/settings/:path*',
     '/help/:path*',
     '/sites/:path*',

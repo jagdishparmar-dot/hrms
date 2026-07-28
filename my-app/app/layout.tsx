@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -21,6 +21,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = rootMetadata;
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#4338CA" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e1b4b" },
+  ],
+};
 
 export default async function RootLayout({
   children,

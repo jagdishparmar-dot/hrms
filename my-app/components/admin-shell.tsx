@@ -80,7 +80,11 @@ export async function AdminShell({
   }
 
   const isPlatform = mode === "platform";
-  const shellBadge = isPlatform ? "Platform console" : "HRMS Portal";
+  const shellBadge = isPlatform
+    ? "Platform console"
+    : isAdmin
+      ? "HRMS Portal"
+      : "Employee Portal";
   const accentLine = isPlatform
     ? "from-transparent via-rose-500/50 to-transparent"
     : "from-transparent via-indigo-500/50 to-transparent";

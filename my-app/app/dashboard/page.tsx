@@ -1,6 +1,9 @@
+import { redirect } from "next/navigation";
+
 import { AdminShell } from "@/components/admin-shell";
 import { DashboardHome } from "@/components/dashboard-home";
 import { getTenantDashboardAction } from "@/lib/appwrite/actions";
+import { requireCompanyAdmin } from "@/lib/appwrite/auth";
 import { getDashboardStatsAction } from "@/lib/appwrite/phase1-actions";
 import { pageMetadata } from "@/lib/site-metadata";
 
@@ -11,6 +14,7 @@ export const metadata = pageMetadata({
 });
 
 export default async function DashboardPage() {
+  await requireCompanyAdmin();
   const [snapshot, tenant] = await Promise.all([
     getDashboardStatsAction(),
     getTenantDashboardAction(),

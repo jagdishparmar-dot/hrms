@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE_NAME,
     short_name: "CheckIn",
     description: SITE_DESCRIPTION,
-    start_url: "/dashboard",
+    start_url: "/me",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#1A3A6B",

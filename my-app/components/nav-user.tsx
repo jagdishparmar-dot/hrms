@@ -37,6 +37,7 @@ function initials(name: string, email: string) {
 export function NavUser({
   user,
   showPlatform = false,
+  isAdmin = true,
   accent = 'indigo',
 }: {
   user: {
@@ -46,6 +47,7 @@ export function NavUser({
     role?: string;
   };
   showPlatform?: boolean;
+  isAdmin?: boolean;
   accent?: 'indigo' | 'rose';
 }) {
   const { isMobile } = useSidebar();
@@ -111,10 +113,17 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/settings" />}>
-                <SettingsIcon />
-                Settings
-              </DropdownMenuItem>
+              {isAdmin ? (
+                <DropdownMenuItem render={<Link href="/settings" />}>
+                  <SettingsIcon />
+                  Settings
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem render={<Link href="/me/profile" />}>
+                  <SettingsIcon />
+                  Profile
+                </DropdownMenuItem>
+              )}
               {showPlatform ? (
                 <DropdownMenuItem render={<Link href="/platform" />}>
                   <Building2Icon />

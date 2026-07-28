@@ -7,6 +7,7 @@ import {
   CalendarClockIcon,
   CalendarDaysIcon,
   ClipboardListIcon,
+  ClockIcon,
   CreditCardIcon,
   LayoutDashboardIcon,
   LifeBuoyIcon,
@@ -17,6 +18,7 @@ import {
   SettingsIcon,
   ShieldIcon,
   UsersIcon,
+  UserIcon,
   WalletIcon,
 } from 'lucide-react';
 
@@ -51,69 +53,102 @@ export type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   mode?: 'tenant' | 'platform';
 };
 
+function employeeNav(): NavMainItem[] {
+  return [
+    {
+      title: 'Home',
+      url: '/me',
+      icon: <ClockIcon />,
+      exact: true,
+    },
+    {
+      title: 'Attendance',
+      url: '/me/attendance',
+      icon: <ClipboardListIcon />,
+    },
+    {
+      title: 'Leave',
+      url: '/leave',
+      icon: <CalendarDaysIcon />,
+    },
+    {
+      title: 'Profile',
+      url: '/me/profile',
+      icon: <UserIcon />,
+    },
+  ];
+}
+
 function tenantNav(isAdmin: boolean, showPlatform: boolean): NavMainItem[] {
+  if (!isAdmin) {
+    return [
+      ...employeeNav(),
+      ...(showPlatform
+        ? [
+            {
+              title: 'Platform',
+              url: '/platform',
+              icon: <Building2Icon />,
+            },
+          ]
+        : []),
+    ];
+  }
+
   return [
     {
       title: 'Dashboard',
       url: '/dashboard',
       icon: <LayoutDashboardIcon />,
     },
-    ...(isAdmin
-      ? [
-          {
-            title: 'Employees',
-            url: '/employees',
-            icon: <UsersIcon />,
-          },
-          {
-            title: 'Sites',
-            url: '/sites',
-            icon: <MapPinIcon />,
-          },
-          {
-            title: 'Shifts',
-            url: '/shifts',
-            icon: <CalendarClockIcon />,
-            items: [
-              { title: 'Shift catalog', url: '/shifts' },
-              { title: 'Roster', url: '/shifts/roster' },
-            ],
-          },
-          {
-            title: 'Attendance',
-            url: '/attendance',
-            icon: <ClipboardListIcon />,
-            items: [
-              { title: 'Daily log', url: '/attendance' },
-              { title: 'Monthly register', url: '/attendance/monthly' },
-            ],
-          },
-        ]
-      : []),
+    {
+      title: 'Employees',
+      url: '/employees',
+      icon: <UsersIcon />,
+    },
+    {
+      title: 'Sites',
+      url: '/sites',
+      icon: <MapPinIcon />,
+    },
+    {
+      title: 'Shifts',
+      url: '/shifts',
+      icon: <CalendarClockIcon />,
+      items: [
+        { title: 'Shift catalog', url: '/shifts' },
+        { title: 'Roster', url: '/shifts/roster' },
+      ],
+    },
+    {
+      title: 'Attendance',
+      url: '/attendance',
+      icon: <ClipboardListIcon />,
+      items: [
+        { title: 'Daily log', url: '/attendance' },
+        { title: 'Monthly register', url: '/attendance/monthly' },
+      ],
+    },
     {
       title: 'Leave',
       url: '/leave',
       icon: <CalendarDaysIcon />,
     },
-    ...(isAdmin
-      ? [
-          {
-            title: 'Payroll',
-            url: '/payroll',
-            icon: <WalletIcon />,
-          },
-          {
-            title: 'Settings',
-            url: '/settings',
-            icon: <SettingsIcon />,
-          },
-          {
-            title: 'Help & Support',
-            url: '/help',
-            icon: <LifeBuoyIcon />,
-          },
-        ]
-      : []),
+    {
+      title: 'Payroll',
+      url: '/payroll',
+      icon: <WalletIcon />,
+    },
+    {
+      title: 'Settings',
+      url: '/settings',
+      icon: <SettingsIcon />,
+    },
+    {
+      title: 'Help & Support',
+      url: '/help',
+      icon: <LifeBuoyIcon />,
+    },
     ...(showPlatform
       ? [
           {
@@ -209,7 +244,7 @@ export function AppSidebar({
       <SidebarContent className="px-2 py-3">
         <NavMain
           items={navMain}
-          label={isPlatform ? 'Platform console' : 'HR Portal'}
+          label={isPlatform ? 'Platform console' : isAdmin ? 'HR Portal' : 'Employee Portal'}
           accent={isPlatform ? 'rose' : 'indigo'}
         />
       </SidebarContent>
@@ -217,6 +252,7 @@ export function AppSidebar({
         <NavUser
           user={user}
           showPlatform={showPlatform || mode === 'platform'}
+          isAdmin={isAdmin}
           accent={isPlatform ? 'rose' : 'indigo'}
         />
       </SidebarFooter>
