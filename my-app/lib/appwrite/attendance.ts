@@ -33,6 +33,13 @@ import type {
   WorkShift,
 } from '@/lib/appwrite/types';
 
+/** Max age of an open punch-in before it no longer blocks a new punch-in. */
+export const OPEN_SHIFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+export function openShiftCutoffMs(nowMs = Date.now()) {
+  return nowMs - OPEN_SHIFT_MAX_AGE_MS;
+}
+
 export async function getEmployeeByUserId(
   userId: string,
   companyId?: string,
@@ -265,13 +272,88 @@ async function findOpenSegment(employee: EmployeeMembership, databases: Database
         Query.limit(5),
       ],
     );
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const cutoff = openShiftCutoffMs();
     const doc = result.documents.find(
       (row) => Number(row.clockInTimestamp || 0) >= cutoff,
     );
     return doc ? mapPunchSegment(doc as unknown as Record<string, unknown>) : null;
   } catch {
     return null;
+  }
+}
+
+async function findOpenAttendanceRecord(
+  employee: EmployeeMembership,
+  databases: Databases,
+) {
+  const cutoff = openShiftCutoffMs();
+  const result = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.attendanceCollectionId,
+    [
+      Query.equal('companyId', employee.companyId),
+      Query.equal('employeeId', employee.id),
+      Query.orderDesc('clockInTimestamp'),
+      Query.limit(5),
+    ],
+  );
+  const doc =
+    result.documents.find((row) => {
+      const clockIn = Boolean(row.clockInTime);
+      const clockOut = Boolean(row.clockOutTime);
+      const inTs = Number(row.clockInTimestamp || 0);
+      return clockIn && !clockOut && inTs >= cutoff;
+    }) ?? null;
+  return doc ? mapAttendance(doc as Record<string, unknown>) : null;
+}
+
+/** Close open punch segments after HR regularization so punch-in is unblocked. */
+export async function closeOpenSegmentsForRegularization(
+  databases: Databases,
+  input: {
+    companyId: string;
+    employeeId: string;
+    attendanceId?: string;
+    dateIso: string;
+    clockOutTime?: string;
+    clockOutTimestamp?: number;
+  },
+) {
+  try {
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.punchSegmentsCollectionId,
+      [
+        Query.equal('companyId', input.companyId),
+        Query.equal('employeeId', input.employeeId),
+        Query.equal('isOpen', true),
+        Query.limit(20),
+      ],
+    );
+    const openDocs = result.documents.filter((row) => {
+      if (input.attendanceId) {
+        return String(row.attendanceId || '') === input.attendanceId;
+      }
+      return String(row.dateIso || '') === input.dateIso;
+    });
+    await Promise.all(
+      openDocs.map((row) =>
+        databases.updateDocument(
+          appwriteConfig.databaseId,
+          appwriteConfig.punchSegmentsCollectionId,
+          row.$id,
+          {
+            isOpen: false,
+            clockOutTime: input.clockOutTime || row.clockOutTime || undefined,
+            clockOutTimestamp:
+              input.clockOutTimestamp ??
+              (row.clockOutTimestamp != null ? Number(row.clockOutTimestamp) : Date.now()),
+          },
+        ),
+      ),
+    );
+  } catch {
+    // Segments collection may not exist yet.
   }
 }
 
@@ -433,14 +515,19 @@ export async function processPunch(input: {
 
   const sitesPromise = loadSitesForEmployee(employee, databases);
   const openSegmentPromise = findOpenSegment(employee, databases);
+  const openAttendancePromise =
+    input.type === 'in'
+      ? findOpenAttendanceRecord(employee, databases)
+      : Promise.resolve(null);
   const punchInCandidatePromise =
     input.type === 'in'
       ? resolvePunchInCandidate(employee, nowMs, tz, companyGrace, databases)
       : Promise.resolve(null);
 
-  const [sites, openSegment, punchInCandidate] = await Promise.all([
+  const [sites, openSegment, openAttendance, punchInCandidate] = await Promise.all([
     sitesPromise,
     openSegmentPromise,
+    openAttendancePromise,
     punchInCandidatePromise,
   ]);
 
@@ -450,6 +537,11 @@ export async function processPunch(input: {
     if (openSegment) {
       throw new Error(
         `Already punched in (segment ${openSegment.segmentIndex + 1} on ${openSegment.dateIso}). Punch out first.`,
+      );
+    }
+    if (openAttendance) {
+      throw new Error(
+        `Already punched in on ${openAttendance.dateIso}. Punch out first.`,
       );
     }
 
@@ -597,7 +689,7 @@ export async function processPunch(input: {
         Query.limit(5),
       ],
     );
-    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const cutoff = openShiftCutoffMs();
     attendanceDoc =
       legacy.documents.find((doc) => {
         const clockIn = Boolean(doc.clockInTime);

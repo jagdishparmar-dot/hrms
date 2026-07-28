@@ -11,6 +11,10 @@ import {
 } from '@/lib/appwrite/shift-change-requests';
 import { writeAuditLog } from '@/lib/appwrite/audit';
 import {
+  closeOpenSegmentsForRegularization,
+  OPEN_SHIFT_MAX_AGE_MS,
+} from '@/lib/appwrite/attendance';
+import {
   assignLeaveBalance,
   ensureLeaveBalance,
   getLeaveTypeName,
@@ -1722,7 +1726,7 @@ export async function listSitesAction(): Promise<Site[]> {
   return result.documents.map((d) => mapSite(d as unknown as Record<string, unknown>));
 }
 
-const LIVE_PUNCH_CUTOFF_MS = 48 * 60 * 60 * 1000;
+const LIVE_PUNCH_CUTOFF_MS = OPEN_SHIFT_MAX_AGE_MS;
 
 export async function getSitesLivePresenceAction(): Promise<SitesLiveSnapshot> {
   const ctx = await requireCompanyAdmin();
@@ -2623,20 +2627,43 @@ export async function reviewRegularizationAction(formData: FormData) {
       }
 
       if (existing.total > 0) {
+        const attendanceId = existing.documents[0].$id;
         await databases.updateDocument(
           appwriteConfig.databaseId,
           appwriteConfig.attendanceCollectionId,
-          existing.documents[0].$id,
+          attendanceId,
           payload,
         );
+        if (payload.clockOutTimestamp) {
+          await closeOpenSegmentsForRegularization(databases, {
+            companyId: ctx.company.id,
+            employeeId: reg.employeeId,
+            attendanceId,
+            dateIso: reg.dateIso,
+            clockOutTime:
+              typeof payload.clockOutTime === 'string' ? payload.clockOutTime : reg.requestedClockOut,
+            clockOutTimestamp: Number(payload.clockOutTimestamp),
+          });
+        }
       } else {
-        await databases.createDocument(
+        const created = await databases.createDocument(
           appwriteConfig.databaseId,
           appwriteConfig.attendanceCollectionId,
           ID.unique(),
           payload,
           employeeDocumentPermissions(ctx.company.teamId),
         );
+        if (payload.clockOutTimestamp) {
+          await closeOpenSegmentsForRegularization(databases, {
+            companyId: ctx.company.id,
+            employeeId: reg.employeeId,
+            attendanceId: created.$id,
+            dateIso: reg.dateIso,
+            clockOutTime:
+              typeof payload.clockOutTime === 'string' ? payload.clockOutTime : reg.requestedClockOut,
+            clockOutTimestamp: Number(payload.clockOutTimestamp),
+          });
+        }
       }
     }
     return { ok: true as const };

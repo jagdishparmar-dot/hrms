@@ -32,6 +32,7 @@ import {
   getDayOfWeek,
   getTodayIso,
 } from '@/src/utils/dateTime';
+import { findOpenAttendanceRecord } from '@/src/utils/openShift';
 
 interface AttendanceContextValue {
   uiState: MainUiState;
@@ -258,9 +259,15 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     [allRecords, timeState.todayIso],
   );
 
+  const openRecord = useMemo(
+    () => findOpenAttendanceRecord(allRecords),
+    [allRecords],
+  );
+
   const uiState: MainUiState = {
     userProfile,
     todayRecord,
+    openRecord,
     todayShiftSchedule,
     allRecords,
     ...timeState,
@@ -334,12 +341,15 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (todayRecord == null && !extra.hasLocationPermission) {
+    if ((openRecord ?? todayRecord) == null && !extra.hasLocationPermission) {
       setExtra((prev) => ({ ...prev, showLocationPermissionDialog: true }));
       return;
     }
 
     setExtra((prev) => ({ ...prev, isClockInLoading: true }));
+
+    const activeOpenRecord =
+      openRecord ?? (todayRecord?.clockOutTime == null ? todayRecord : null);
 
     const deviceId =
       Constants.installationId || Constants.sessionId || Constants.deviceName || undefined;
@@ -368,7 +378,32 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
         return location;
       };
 
-      if (todayRecord == null) {
+      if (activeOpenRecord) {
+        const location = await resolvePunchLocation();
+        const updated = await attendanceRepository.clockOut({
+          lat: location.latitude,
+          long: location.longitude,
+          accuracy: location.accuracy ?? undefined,
+          deviceId,
+        });
+        setAllRecords((records) => mergeAttendanceRecord(records, updated));
+        const priorDay =
+          activeOpenRecord.dateIso !== getTodayIso()
+            ? ` (shift from ${activeOpenRecord.dateIso})`
+            : '';
+        setExtra((prev) => ({
+          ...prev,
+          isClockInLoading: false,
+          snackbarMessage: `Clocked out at ${updated.clockOutTime}${priorDay}! Total working time: ${updated.totalHoursFormatted}`,
+        }));
+        void reloadData();
+      } else if (todayRecord?.clockOutTime != null) {
+        setExtra((prev) => ({
+          ...prev,
+          isClockInLoading: false,
+          snackbarMessage: `You have already completed attendance for today (${todayRecord.totalHoursFormatted} hrs).`,
+        }));
+      } else {
         const location = await resolvePunchLocation();
         const newRecord = await attendanceRepository.clockIn({
           lat: location.latitude,
@@ -385,27 +420,6 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           snackbarMessage: `Successfully clocked in at ${newRecord.clockInTime}!`,
         }));
         void reloadData();
-      } else if (todayRecord.clockOutTime == null) {
-        const location = await resolvePunchLocation();
-        const updated = await attendanceRepository.clockOut({
-          lat: location.latitude,
-          long: location.longitude,
-          accuracy: location.accuracy ?? undefined,
-          deviceId,
-        });
-        setAllRecords((records) => mergeAttendanceRecord(records, updated));
-        setExtra((prev) => ({
-          ...prev,
-          isClockInLoading: false,
-          snackbarMessage: `Clocked out at ${updated.clockOutTime}! Total working time: ${updated.totalHoursFormatted}`,
-        }));
-        void reloadData();
-      } else {
-        setExtra((prev) => ({
-          ...prev,
-          isClockInLoading: false,
-          snackbarMessage: `You have already completed attendance for today (${todayRecord.totalHoursFormatted} hrs).`,
-        }));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Clock action failed';
@@ -417,6 +431,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     }
   }, [
     extra.hasLocationPermission,
+    openRecord,
     reloadData,
     todayRecord,
     userProfile,

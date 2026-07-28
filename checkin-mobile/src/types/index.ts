@@ -125,6 +125,8 @@ export interface TodayShiftSchedule {
 export interface MainUiState {
   userProfile: UserProfile;
   todayRecord: AttendanceRecord | null;
+  /** Most recent open shift within the punch window (may be from a prior day). */
+  openRecord: AttendanceRecord | null;
   todayShiftSchedule: TodayShiftSchedule;
   allRecords: AttendanceRecord[];
   currentTimeFormatted: string;

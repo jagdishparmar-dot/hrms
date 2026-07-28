@@ -87,8 +87,13 @@ export function HomeScreen({
   const insets = useSafeAreaInsets();
   const { contentPaddingBottom } = useScreenInsets();
   const todayRecord = uiState.todayRecord;
-  const isClockedIn = todayRecord != null && todayRecord.clockOutTime == null;
-  const isCompleted = todayRecord != null && todayRecord.clockOutTime != null;
+  const openRecord = uiState.openRecord;
+  const activeOpenRecord =
+    openRecord ?? (todayRecord?.clockOutTime == null ? todayRecord : null);
+  const isClockedIn = activeOpenRecord != null;
+  const isCompleted = !isClockedIn && todayRecord != null && todayRecord.clockOutTime != null;
+  const openFromPriorDay =
+    openRecord != null && openRecord.dateIso !== uiState.todayIso;
 
   const firstName = uiState.userProfile.name.split(' ')[0] || uiState.userProfile.name;
   const greeting = useMemo(() => greetingForHour(new Date().getHours()), []);
@@ -127,9 +132,11 @@ export function HomeScreen({
     : isClockedIn
       ? {
           label: 'On duty',
-          hint: todayRecord?.clockInTime
-            ? `Since ${todayRecord.clockInTime}`
-            : 'Shift in progress',
+          hint: openFromPriorDay
+            ? `Open shift from ${openRecord?.dateIso} — clock out before punching in today`
+            : activeOpenRecord?.clockInTime
+              ? `Since ${activeOpenRecord.clockInTime}`
+              : 'Shift in progress',
           color: '#22C55E',
           bg: 'rgba(34,197,94,0.18)',
           icon: 'verified' as const,
@@ -203,6 +210,15 @@ export function HomeScreen({
 
         <View style={styles.ctaSection}>
           <Text style={styles.sectionHint}>{status.hint}</Text>
+          {openFromPriorDay ? (
+            <View style={styles.openShiftBanner}>
+              <MaterialIcons name="warning-amber" size={18} color={Colors.statusLate} />
+              <Text style={styles.openShiftBannerText}>
+                You forgot to clock out on {openRecord?.dateIso}. Tap below to close that shift
+                first.
+              </Text>
+            </View>
+          ) : null}
           <ClockActionButton
             isClockedIn={isClockedIn}
             isCompleted={isCompleted}
@@ -224,8 +240,19 @@ export function HomeScreen({
           <MetricCell
             icon="logout"
             label="Clock out"
-            value={todayRecord?.clockOutTime ?? (isClockedIn ? 'Active' : '--:--')}
-            valueColor={isClockedIn && !isCompleted ? Colors.success : undefined}
+            value={
+              todayRecord?.clockOutTime ??
+              (todayRecord?.clockInTime && !todayRecord.clockOutTime
+                ? 'Active'
+                : openFromPriorDay
+                  ? 'Prior day open'
+                  : '--:--')
+            }
+            valueColor={
+              (todayRecord?.clockInTime && !todayRecord?.clockOutTime) || openFromPriorDay
+                ? Colors.success
+                : undefined
+            }
           />
           <View style={styles.metricDivider} />
           <MetricCell
@@ -985,6 +1012,25 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.mutedForeground,
     marginBottom: 10,
+  },
+  openShiftBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    width: '100%',
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
+  openShiftBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.medium,
+    color: Colors.statusLate,
+    lineHeight: 18,
   },
   sectionTitle: {
     marginTop: 22,
