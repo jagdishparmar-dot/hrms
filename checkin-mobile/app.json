@@ -2,11 +2,9 @@
   "expo": {
     "name": "CheckIn",
     "slug": "checkin-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.1",
     "updates": {
       "url": "https://u.expo.dev/7ee0ed7a-82ef-49cb-b977-94ff5485fdac",
       "checkAutomatically": "ON_LOAD",
@@ -37,7 +35,7 @@
       ],
       "predictiveBackGestureEnabled": false,
       "package": "com.ayersh009.checkinmobile",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "bundler": "metro",

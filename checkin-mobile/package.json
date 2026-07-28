@@ -1,7 +1,7 @@
 {
   "name": "checkin-mobile",
   "main": "expo-router/entry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
@@ -60,8 +60,8 @@
     "eas:android:preview": "eas build --platform android --profile preview",
     "eas:android:production": "eas build --platform android --profile production",
     "eas:android:dev": "eas build --platform android --profile development",
-    "eas:update:preview": "eas update --channel preview --environment preview",
-    "eas:update:production": "eas update --channel production --environment production",
+    "eas:update:preview": "npx eas-cli@21.2.0 update --channel preview --environment preview --non-interactive",
+    "eas:update:production": "npx eas-cli@21.2.0 update --channel production --environment production --non-interactive",
     "setup:appwrite": "node scripts/setup-appwrite-schema.mjs",
     "setup:appwrite:recreate": "node scripts/setup-appwrite-schema.mjs --recreate",
     "seed:appwrite": "node scripts/seed-appwrite-demo.mjs",

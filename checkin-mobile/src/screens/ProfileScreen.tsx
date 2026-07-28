@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -24,6 +24,7 @@ import { authHeaders } from '@/src/services/apiClient';
 import { Colors } from '@/src/theme/colors';
 import { Fonts } from '@/src/theme/typography';
 import type { EmployeeDocument, MainUiState, UserProfile } from '@/src/types';
+import { formatUpdateLabel, getAppVersionInfo } from '@/src/utils/appVersion';
 
 interface ProfileScreenProps {
   uiState: MainUiState;
@@ -221,6 +222,8 @@ export function ProfileScreen({
     ? `${AppwriteConfig.apiBaseUrl}/api/v1/me/profile/picture/file`
     : null;
 
+  const versionInfo = useMemo(() => getAppVersionInfo(), []);
+
   return (
     <View style={styles.root}>
       <ScreenHeader title="Profile" subtitle="Contact · payroll · documents" />
@@ -403,6 +406,18 @@ export function ProfileScreen({
             <Text style={styles.logoutText}>Sign Out</Text>
           </Pressable>
         ) : null}
+
+        <View style={styles.versionFooter}>
+          <Text style={styles.versionTitle}>CheckIn v{versionInfo.appVersion}</Text>
+          <Text style={styles.versionMeta}>
+            Build {versionInfo.buildNumber}
+            {versionInfo.channel ? ` · ${versionInfo.channel}` : ''}
+            {` · ${formatUpdateLabel(versionInfo.updateId)}`}
+          </Text>
+          {versionInfo.runtimeVersion !== versionInfo.appVersion ? (
+            <Text style={styles.versionRuntime}>Runtime {versionInfo.runtimeVersion}</Text>
+          ) : null}
+        </View>
       </ScrollView>
     </View>
   );
@@ -628,4 +643,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: { color: Colors.destructive, fontFamily: Fonts.bold, fontSize: 14 },
+  versionFooter: {
+    marginTop: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  versionTitle: {
+    fontSize: 12,
+    fontFamily: Fonts.semibold,
+    color: Colors.mutedForeground,
+  },
+  versionMeta: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.placeholder,
+    textAlign: 'center',
+  },
+  versionRuntime: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: Colors.placeholder,
+  },
 });
