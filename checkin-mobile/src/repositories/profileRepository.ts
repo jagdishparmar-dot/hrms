@@ -1,7 +1,7 @@
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 
 import { AppwriteConfig } from '@/src/config/appwrite';
-import { authHeaders } from '@/src/services/apiClient';
+import { authHeaders, authorizedFetch } from '@/src/services/apiClient';
 import type { EmployeeDocument, UserProfile } from '@/src/types';
 
 export type ProfileSnapshot = {
@@ -79,8 +79,9 @@ export const profileRepository = {
       'officeLocation' | 'officeLatitude' | 'officeLongitude' | 'geofenceRadiusMeters' | 'lastKnownDistanceMeters' | 'isWithinGeofence'
     >,
   ): Promise<UserProfile> {
-    const headers = await authHeaders(companyId);
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile`, { headers });
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile`, {
+      companyId,
+    });
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Unable to load profile');
@@ -102,10 +103,9 @@ export const profileRepository = {
       'officeLocation' | 'officeLatitude' | 'officeLongitude' | 'geofenceRadiusMeters' | 'lastKnownDistanceMeters' | 'isWithinGeofence'
     >,
   ): Promise<UserProfile> {
-    const headers = await authHeaders(companyId);
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile`, {
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile`, {
       method: 'PATCH',
-      headers,
+      companyId,
       body: JSON.stringify(patch),
     });
     const data = await res.json();
@@ -137,16 +137,15 @@ export const profileRepository = {
       'officeLocation' | 'officeLatitude' | 'officeLongitude' | 'geofenceRadiusMeters' | 'lastKnownDistanceMeters' | 'isWithinGeofence'
     >;
   }): Promise<UserProfile> {
-    const headers = await authHeaders(params.companyId);
     const dataBase64 = await readAsStringAsync(params.uri, {
       encoding: EncodingType.Base64,
     });
     const mimeType =
       params.mimeType === 'image/jpg' ? 'image/jpeg' : params.mimeType || 'application/octet-stream';
 
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile/documents`, {
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/profile/documents`, {
       method: 'POST',
-      headers,
+      companyId: params.companyId,
       body: JSON.stringify({
         category: params.category,
         title: params.title,
@@ -176,10 +175,9 @@ export const profileRepository = {
       'officeLocation' | 'officeLatitude' | 'officeLongitude' | 'geofenceRadiusMeters' | 'lastKnownDistanceMeters' | 'isWithinGeofence'
     >,
   ): Promise<UserProfile> {
-    const headers = await authHeaders(companyId);
-    const res = await fetch(
+    const res = await authorizedFetch(
       `${AppwriteConfig.apiBaseUrl}/api/v1/me/profile/documents/${documentId}`,
-      { method: 'DELETE', headers },
+      { method: 'DELETE', companyId },
     );
     const data = await res.json();
     if (!res.ok) {

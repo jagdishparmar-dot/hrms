@@ -1,5 +1,5 @@
 import { AppwriteConfig } from '@/src/config/appwrite';
-import { authHeaders } from '@/src/services/apiClient';
+import { authorizedFetch } from '@/src/services/apiClient';
 import type { Holiday, LeaveBalance, LeaveRequest, LeaveType } from '@/src/types';
 
 export type LeaveSnapshot = {
@@ -17,8 +17,9 @@ export class LeaveRepository {
   }
 
   async getSnapshot(): Promise<LeaveSnapshot> {
-    const headers = await authHeaders(this.companyId);
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/leave`, { headers });
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/leave`, {
+      companyId: this.companyId,
+    });
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Unable to load leave data');
@@ -37,10 +38,9 @@ export class LeaveRepository {
     toDate: string;
     note?: string;
   }): Promise<void> {
-    const headers = await authHeaders(this.companyId);
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/leave`, {
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/leave`, {
       method: 'POST',
-      headers,
+      companyId: this.companyId,
       body: JSON.stringify(params),
     });
     const data = await res.json();

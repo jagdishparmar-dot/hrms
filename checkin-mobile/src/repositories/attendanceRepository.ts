@@ -2,7 +2,7 @@ import type { Models } from 'react-native-appwrite';
 
 import { AppwriteConfig } from '@/src/config/appwrite';
 import { databases, Query } from '@/src/lib/appwrite';
-import { authHeaders, warmAuthHeaders } from '@/src/services/apiClient';
+import { authorizedFetch, warmAuthHeaders } from '@/src/services/apiClient';
 import type { CachedPunchLocation } from '@/src/services/locationService';
 import { profileRepository } from '@/src/repositories/profileRepository';
 import type {
@@ -405,20 +405,15 @@ export class AttendanceRepository {
     return result.documents.map(mapAttendance);
   }
 
-  private async authHeaders() {
-    return authHeaders(this.companyId);
-  }
-
   async clockIn(params: {
     lat: number;
     long: number;
     accuracy?: number;
     deviceId?: string;
   }) {
-    const headers = await this.authHeaders();
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/attendance/punch`, {
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/attendance/punch`, {
       method: 'POST',
-      headers,
+      companyId: this.companyId,
       body: JSON.stringify({
         type: 'in',
         lat: params.lat,
@@ -438,10 +433,9 @@ export class AttendanceRepository {
     accuracy?: number;
     deviceId?: string;
   }) {
-    const headers = await this.authHeaders();
-    const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/attendance/punch`, {
+    const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/attendance/punch`, {
       method: 'POST',
-      headers,
+      companyId: this.companyId,
       body: JSON.stringify({
         type: 'out',
         lat: params.lat,
@@ -462,12 +456,11 @@ export class AttendanceRepository {
     requestedClockOut?: string;
     requestedOutDateIso?: string;
   }) {
-    const headers = await this.authHeaders();
-    const res = await fetch(
+    const res = await authorizedFetch(
       `${AppwriteConfig.apiBaseUrl}/api/v1/attendance/regularization`,
       {
         method: 'POST',
-        headers,
+        companyId: this.companyId,
         body: JSON.stringify(params),
       },
     );
@@ -477,10 +470,9 @@ export class AttendanceRepository {
   }
 
   async listRegularizations(): Promise<RegularizationRequest[]> {
-    const headers = await this.authHeaders();
-    const res = await fetch(
+    const res = await authorizedFetch(
       `${AppwriteConfig.apiBaseUrl}/api/v1/attendance/regularization`,
-      { headers },
+      { companyId: this.companyId },
     );
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Unable to load regularizations');

@@ -16,6 +16,12 @@ import {
 import type { Company, EmployeeMembership } from '@/lib/appwrite/types';
 import { isCompanyAdminRole } from '@/lib/appwrite/types';
 
+export async function clearAuthCookies() {
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+  jar.delete(COMPANY_COOKIE);
+}
+
 export async function getSessionSecret() {
   const jar = await cookies();
   return jar.get(SESSION_COOKIE)?.value ?? null;
@@ -28,6 +34,7 @@ export async function getCurrentUser(): Promise<Models.User<Models.Preferences> 
     const { account } = createSessionClient(secret);
     return await account.get();
   } catch {
+    await clearAuthCookies();
     return null;
   }
 }
@@ -41,6 +48,13 @@ export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   return user;
+}
+
+/** Use when tenant context is missing but a session cookie may still exist. */
+export async function redirectBrokenTenantSession(): Promise<never> {
+  const user = await getCurrentUser();
+  if (user) redirect('/logout?reason=no-company');
+  redirect('/login');
 }
 
 export async function requirePlatformAdmin() {
@@ -81,7 +95,7 @@ export async function requireTenantMember(options?: { allowPasswordChange?: bool
   if (!user) redirect('/login');
 
   const resolved = await resolveActiveCompany(user.$id);
-  
+
   if (!resolved?.company || !resolved.membership || resolved.membership.status !== 'active') {
     redirect('/logout?reason=no-company');
   }
@@ -141,7 +155,7 @@ export async function requireAdmin() {
 export async function ensureMembershipOrRedirect(userId: string, companyId: string) {
   const membership = await getMembership(userId, companyId);
   if (!membership || membership.status !== 'active') {
-    redirect('/login');
+    redirect('/logout?reason=no-company');
   }
   return membership;
 }

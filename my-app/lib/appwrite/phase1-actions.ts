@@ -32,7 +32,8 @@ import {
   requireTenantMember,
   getCurrentUser,
 } from '@/lib/appwrite/auth';
-import { appwriteConfig, SESSION_COOKIE } from '@/lib/appwrite/config';
+import { appwriteConfig, COMPANY_COOKIE, SESSION_COOKIE } from '@/lib/appwrite/config';
+import { tenantHomePath } from '@/lib/appwrite/routing';
 import { assertNotProtectedSuperAdmin } from '@/lib/appwrite/super-admin';
 import {
   employeeCodeConfigFromSettings,
@@ -959,7 +960,14 @@ export async function changePasswordAction(formData: FormData) {
         { mustChangePassword: false },
       );
     }
-    redirect('/dashboard');
+
+    const jar = await cookies();
+    const companyId = jar.get(COMPANY_COOKIE)?.value;
+    const activeMembership = companyId
+      ? memberships.documents.find((doc) => String(doc.companyId) === companyId)
+      : memberships.documents[0];
+    const role = activeMembership ? String(activeMembership.role || 'employee') : 'employee';
+    redirect(tenantHomePath(role));
   } catch (error) {
     if (
       error &&

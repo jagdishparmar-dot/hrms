@@ -6,7 +6,7 @@ import {
   EmployeeMobileHeader,
 } from '@/components/employee-shell-chrome';
 import { EmployeeBottomNav } from '@/components/employee-bottom-nav';
-import { getCurrentTenantContext } from '@/lib/appwrite/auth';
+import { requireTenantMember } from '@/lib/appwrite/auth';
 import { isCompanyAdminRole } from '@/lib/appwrite/types';
 import { cn } from '@/lib/utils';
 
@@ -17,8 +17,7 @@ export async function EmployeeShell({
   children: ReactNode;
   className?: string;
 }) {
-  const ctx = await getCurrentTenantContext();
-  if (!ctx) redirect('/login');
+  const ctx = await requireTenantMember();
   if (ctx.membership.mustChangePassword) redirect('/change-password');
   if (isCompanyAdminRole(ctx.membership.role)) redirect('/dashboard');
 

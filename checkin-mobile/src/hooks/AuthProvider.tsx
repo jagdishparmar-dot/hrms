@@ -15,6 +15,7 @@ import {
   changePasswordApi,
   clearAuthCache,
   fetchMemberships,
+  setAuthFailureHandler,
   type CompanyMembership,
 } from '@/src/services/apiClient';
 import {
@@ -104,50 +105,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
 
-  const applyGate = useCallback(
-    async (current: AuthUser) => {
-      const [rows, storedCompanyId] = await Promise.all([
-        fetchMemberships(),
-        getStoredCompanyId(),
-      ]);
-      if (rows.length === 0) {
-        throw new Error('No employee record found. Ask your HR admin to provision your account.');
-      }
+  const resetLocalAuthState = useCallback(() => {
+    clearAuthCache();
+    attendanceRepository.setUserId(null);
+    attendanceRepository.setCompanyId(null);
+    leaveRepository.setCompanyId(null);
+    setUser(null);
+    setAuthGate('login');
+    setMemberships([]);
+    setSelectedCompanyId(null);
+    setMustChangePassword(false);
+  }, []);
 
-      const resolved = await resolveAuthGate({
-        user: current,
-        memberships: rows,
-        storedCompanyId,
-      });
+  const logout = useCallback(async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Already logged out or session expired.
+    }
+    await clearStoredCompanyId();
+    resetLocalAuthState();
+  }, [resetLocalAuthState]);
 
-      setMemberships(rows);
-      setMustChangePassword(resolved.mustChangePassword);
-      setSelectedCompanyId(resolved.companyId);
-      setAuthGate(resolved.gate);
+  const applyGate = useCallback(async (current: AuthUser) => {
+    const [rows, storedCompanyId] = await Promise.all([
+      fetchMemberships(),
+      getStoredCompanyId(),
+    ]);
+    if (rows.length === 0) {
+      throw new Error('No employee record found. Ask your HR admin to provision your account.');
+    }
 
-      if (resolved.gate === 'ready' && resolved.companyId) {
-        await hydrateUserData(current, resolved.companyId);
-      }
-    },
-    [],
-  );
+    const resolved = await resolveAuthGate({
+      user: current,
+      memberships: rows,
+      storedCompanyId,
+    });
+
+    if (resolved.gate === 'ready' && resolved.companyId) {
+      await hydrateUserData(current, resolved.companyId);
+    }
+
+    setMemberships(rows);
+    setMustChangePassword(resolved.mustChangePassword);
+    setSelectedCompanyId(resolved.companyId);
+    setAuthGate(resolved.gate);
+    setUser(current);
+  }, []);
 
   const refreshSession = useCallback(async () => {
     const current = await getCurrentUser();
     if (current) {
       await applyGate(current);
-      setUser(current);
-    } else {
-      attendanceRepository.setUserId(null);
-      attendanceRepository.setCompanyId(null);
-      leaveRepository.setCompanyId(null);
-      setUser(null);
-      setAuthGate('login');
-      setMemberships([]);
-      setSelectedCompanyId(null);
-      setMustChangePassword(false);
+      return;
     }
-  }, [applyGate]);
+    await logout();
+  }, [applyGate, logout]);
+
+  useEffect(() => {
+    setAuthFailureHandler(() => logout());
+    return () => setAuthFailureHandler(null);
+  }, [logout]);
 
   useEffect(() => {
     let mounted = true;
@@ -156,17 +174,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const current = await getCurrentUser();
         if (!mounted) return;
-        if (current) {
-          await applyGate(current);
-          if (!mounted) return;
-          setUser(current);
-        } else {
-          setAuthGate('login');
+        if (!current) {
+          resetLocalAuthState();
+          return;
         }
+        await applyGate(current);
       } catch {
-        if (mounted) {
-          setAuthGate('login');
-        }
+        if (!mounted) return;
+        await logout();
       } finally {
         if (mounted) {
           setIsLoading(false);
@@ -178,20 +193,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [applyGate]);
+  }, [applyGate, logout, resetLocalAuthState]);
 
   useEffect(() => {
     if (isLoading || authGate === 'loading') return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const authScreen = segments[1];
 
-    if (authGate === 'login' && !inAuthGroup) {
-      router.replace('/(auth)/login');
+    if (authGate === 'login') {
+      const onLogin = inAuthGroup && authScreen === 'login';
+      if (!onLogin) {
+        router.replace('/(auth)/login');
+      }
       return;
     }
 
     if (authGate === 'change_password') {
-      const onChangePassword = segments[1] === 'change-password';
+      const onChangePassword = inAuthGroup && authScreen === 'change-password';
       if (!onChangePassword) {
         router.replace('/(auth)/change-password');
       }
@@ -199,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (authGate === 'select_company') {
-      const onSelectCompany = segments[1] === 'select-company';
+      const onSelectCompany = inAuthGroup && authScreen === 'select-company';
       if (!onSelectCompany) {
         router.replace('/(auth)/select-company');
       }
@@ -215,7 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const current = await loginWithEmail(email, password);
       await applyGate(current);
-      setUser(current);
     },
     [applyGate],
   );
@@ -224,24 +242,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (params: { name: string; email: string; password: string }) => {
       const current = await registerWithEmail(params);
       await applyGate(current);
-      setUser(current);
     },
     [applyGate],
   );
-
-  const logout = useCallback(async () => {
-    await logoutRequest();
-    await clearStoredCompanyId();
-    clearAuthCache();
-    attendanceRepository.setUserId(null);
-    attendanceRepository.setCompanyId(null);
-    leaveRepository.setCompanyId(null);
-    setUser(null);
-    setAuthGate('login');
-    setMemberships([]);
-    setSelectedCompanyId(null);
-    setMustChangePassword(false);
-  }, []);
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
@@ -255,12 +258,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const selectCompany = useCallback(
     async (companyId: string) => {
       if (!user) throw new Error('Not signed in');
+      const allowed = memberships.some((membership) => membership.companyId === companyId);
+      if (!allowed) {
+        throw new Error('Select a valid company.');
+      }
       await setStoredCompanyId(companyId);
       setSelectedCompanyId(companyId);
       setAuthGate('ready');
       await hydrateUserData(user, companyId);
     },
-    [user],
+    [memberships, user],
   );
 
   const value = useMemo<AuthContextValue>(

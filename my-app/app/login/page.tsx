@@ -7,8 +7,9 @@ import { ArrowRight } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 import { LoginForm } from "@/components/login-form";
 import { MobileAppDownloadQr } from "@/components/mobile-app-download-qr";
-import { getCurrentUser, isPlatformAdminEmail } from "@/lib/appwrite/auth";
+import { getCurrentUser, isPlatformAdminEmail, redirectBrokenTenantSession } from "@/lib/appwrite/auth";
 import { COMPANY_COOKIE } from "@/lib/appwrite/config";
+import { tenantHomePath } from "@/lib/appwrite/routing";
 import { listMembershipsForUser } from "@/lib/appwrite/tenant";
 import { pageMetadata } from "@/lib/site-metadata";
 
@@ -39,7 +40,12 @@ export default async function LoginPage() {
     if (isPlatformAdminEmail(user.email || "") && memberships.length === 0) {
       redirect("/platform");
     }
-    if (companyId || memberships.length === 1) redirect("/dashboard");
+    if (companyId) {
+      const selected = memberships.find((membership) => membership.companyId === companyId);
+      if (selected) redirect(tenantHomePath(selected.role));
+      redirect("/select-company");
+    }
+    if (memberships.length === 1) redirect(tenantHomePath(memberships[0]!.role));
     if (memberships.length > 1) redirect("/select-company");
   }
 

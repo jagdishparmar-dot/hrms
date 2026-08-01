@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import type { CSSProperties, ReactNode } from "react";
+import { redirect } from 'next/navigation';
+import type { CSSProperties, ReactNode } from 'react';
 import { Sparkles } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -14,6 +14,7 @@ import {
 import {
   getCurrentTenantContext,
   isPlatformAdminEmail,
+  requireTenantMember,
   requirePlatformAdmin,
 } from "@/lib/appwrite/auth";
 import { isCompanyAdminRole } from "@/lib/appwrite/types";
@@ -60,8 +61,7 @@ export async function AdminShell({
       isAdmin = isCompanyAdminRole(ctx.membership.role);
     }
   } else {
-    const ctx = await getCurrentTenantContext();
-    if (!ctx) redirect("/login");
+    const ctx = await requireTenantMember();
     if (ctx.membership.mustChangePassword) redirect("/change-password");
 
     company = {

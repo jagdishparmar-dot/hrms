@@ -13,10 +13,31 @@ const JWT_CACHE_TTL_MS = 10 * 60 * 1000;
 
 let cachedJwt: { token: string; expiresAt: number } | null = null;
 let jwtInFlight: Promise<string> | null = null;
+let authFailureHandler: (() => void | Promise<void>) | null = null;
+
+export class SessionExpiredError extends Error {
+  readonly status = 401;
+
+  constructor(message = 'Session expired. Please sign in again.') {
+    super(message);
+    this.name = 'SessionExpiredError';
+  }
+}
+
+export function setAuthFailureHandler(handler: (() => void | Promise<void>) | null) {
+  authFailureHandler = handler;
+}
 
 export function clearAuthCache() {
   cachedJwt = null;
   jwtInFlight = null;
+}
+
+async function notifyAuthFailure() {
+  clearAuthCache();
+  if (authFailureHandler) {
+    await authFailureHandler();
+  }
 }
 
 async function resolveJwtToken(): Promise<string> {
@@ -30,12 +51,17 @@ async function resolveJwtToken(): Promise<string> {
   }
 
   jwtInFlight = (async () => {
-    const jwt = await account.createJWT();
-    cachedJwt = {
-      token: jwt.jwt,
-      expiresAt: Date.now() + JWT_CACHE_TTL_MS,
-    };
-    return jwt.jwt;
+    try {
+      const jwt = await account.createJWT();
+      cachedJwt = {
+        token: jwt.jwt,
+        expiresAt: Date.now() + JWT_CACHE_TTL_MS,
+      };
+      return jwt.jwt;
+    } catch {
+      await notifyAuthFailure();
+      throw new SessionExpiredError();
+    }
   })();
 
   try {
@@ -50,7 +76,7 @@ export async function warmAuthHeaders(companyId?: string | null) {
   await authHeaders(companyId);
 }
 
-async function authHeaders(companyId?: string | null) {
+export async function authHeaders(companyId?: string | null) {
   const token = await resolveJwtToken();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -62,11 +88,30 @@ async function authHeaders(companyId?: string | null) {
   return headers;
 }
 
-export async function fetchMemberships(): Promise<CompanyMembership[]> {
-  const headers = await authHeaders();
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/memberships`, {
-    headers,
+export async function authorizedFetch(
+  input: string,
+  init: RequestInit & { companyId?: string | null } = {},
+) {
+  const { companyId, headers: initHeaders, ...rest } = init;
+  const headers = await authHeaders(companyId);
+  const res = await fetch(input, {
+    ...rest,
+    headers: {
+      ...headers,
+      ...(initHeaders as Record<string, string> | undefined),
+    },
   });
+
+  if (res.status === 401 || res.status === 403) {
+    await notifyAuthFailure();
+    throw new SessionExpiredError();
+  }
+
+  return res;
+}
+
+export async function fetchMemberships(): Promise<CompanyMembership[]> {
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/memberships`);
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'Unable to load companies');
@@ -78,10 +123,8 @@ export async function changePasswordApi(params: {
   currentPassword: string;
   newPassword: string;
 }): Promise<void> {
-  const headers = await authHeaders();
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/auth/change-password`, {
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/auth/change-password`, {
     method: 'POST',
-    headers,
     body: JSON.stringify(params),
   });
   const data = await res.json();
@@ -89,5 +132,3 @@ export async function changePasswordApi(params: {
     throw new Error(data.error || 'Unable to change password');
   }
 }
-
-export { authHeaders };

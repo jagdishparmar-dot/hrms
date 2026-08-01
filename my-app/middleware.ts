@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import {
-  COMPANY_COOKIE,
   COMPANY_SLUG_HEADER,
   SESSION_COOKIE,
   appwriteConfig,
@@ -37,11 +36,6 @@ export function middleware(request: NextRequest) {
     requestHeaders.set(COMPANY_SLUG_HEADER, slug);
   }
 
-  const isAuthRoute =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/select-company');
-
   const isPlatform = pathname.startsWith('/platform');
   const isTenantApp =
     pathname.startsWith('/dashboard') ||
@@ -63,12 +57,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAuthRoute && session && pathname.startsWith('/login')) {
-    const url = request.nextUrl.clone();
-    const hasCompany = Boolean(request.cookies.get(COMPANY_COOKIE)?.value);
-    url.pathname = hasCompany ? '/dashboard' : '/select-company';
-    return NextResponse.redirect(url);
-  }
+  // Do not redirect away from /login based on cookie presence alone.
+  // Stale/invalid session cookies are cleared server-side in getCurrentUser().
+  // The login page validates the session and routes authenticated users.
 
   return NextResponse.next({
     request: { headers: requestHeaders },

@@ -1,5 +1,5 @@
 import { AppwriteConfig } from '@/src/config/appwrite';
-import { authHeaders } from '@/src/services/apiClient';
+import { authorizedFetch } from '@/src/services/apiClient';
 import type {
   ShiftCatalogItem,
   ShiftChangeRequest,
@@ -18,9 +18,8 @@ export async function fetchTodayShiftSchedule(
 ): Promise<TodayShiftSchedule> {
   if (!companyId) return EMPTY_SCHEDULE;
 
-  const headers = await authHeaders(companyId);
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/shifts/today`, {
-    headers,
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/me/shifts/today`, {
+    companyId,
   });
   const data = await res.json();
   if (!res.ok) {
@@ -52,8 +51,9 @@ export async function fetchTodayShiftSchedule(
 export async function fetchShiftCatalog(companyId: string | null): Promise<ShiftCatalogItem[]> {
   if (!companyId) return [];
 
-  const headers = await authHeaders(companyId);
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/catalog`, { headers });
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/catalog`, {
+    companyId,
+  });
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'Unable to load shifts');
@@ -73,10 +73,9 @@ export async function submitShiftChangeRequest(
 ) {
   if (!companyId) throw new Error('Company not selected');
 
-  const headers = await authHeaders(companyId);
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
     method: 'POST',
-    headers,
+    companyId,
     body: JSON.stringify(payload),
   });
   const data = await res.json();
@@ -89,9 +88,8 @@ export async function listShiftChangeRequests(
 ): Promise<ShiftChangeRequest[]> {
   if (!companyId) return [];
 
-  const headers = await authHeaders(companyId);
-  const res = await fetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
-    headers,
+  const res = await authorizedFetch(`${AppwriteConfig.apiBaseUrl}/api/v1/shifts/change-request`, {
+    companyId,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Unable to load shift change requests');
